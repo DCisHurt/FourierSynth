@@ -23,9 +23,9 @@ import Conductor from './conductor.js';
 import WaveSplitController from './controller/wave-split-controller.js';
 import WaveDrawController from './controller/wave-draw-controller.js';
 import RangeController from './controller/range-controller.js';
-import { playSoundWave } from './synth.js';
+import { playSoundWave, updateBuffer } from './synth.js';
 
-
+import { connectMidi } from './midi.js';
 
 let conductor = null;
 
@@ -59,6 +59,7 @@ function init() {
             waveDrawController.onDrawingEnd.push(() => {
                 waveDrawSplitController.splitAnim = true;
                 waveDrawSplitController.setPath(waveDrawController.normPath);
+                updateBuffer(waveDrawSplitController.partialWave);
             });
             // Reset the slider back to 1 when the wave changes to draw the full wave.
             if (waveDrawSliderController) {
@@ -70,6 +71,7 @@ function init() {
             waveDrawSliderController.onValueChange.push(val => {
                 waveDrawSplitController.fourierAmt = val;
                 waveDrawSplitController.splitAnim = false;
+                updateBuffer(waveDrawSplitController.partialWave);
             });
         }
         controllers.push(waveDrawSplitController);
@@ -77,10 +79,12 @@ function init() {
     if (hasElement('wave-draw-button')) {
         const button = document.getElementById('wave-draw-button');
         if (button) {
-            button.addEventListener('click', () => playSoundWave(waveDrawSplitController.partialWave));
+            button.addEventListener('click', () => playSoundWave(440));
         }
     }
-    
+
+    connectMidi();
+
     conductor = new Conductor(controllers);
     conductor.start();
     // To let me play around with things in the console.

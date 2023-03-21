@@ -2,7 +2,9 @@
 import { normaliseWave, getWaveFunction } from "./wave-things.js";
 
 export const SAMPLE_RATE = 44100;
-export const baseFrequency = 440;
+
+var buff = [];
+
 
 let audioContext = null;
 
@@ -18,34 +20,43 @@ function getAudioContext() {
     return audioContext;
 }
 
+export function updateBuffer(wave) {
+    buff = wave;
+}
+
+// export function updatePitch(freq) {
+//     pitch = freq;
+// }
+
 /**
  *
  * @param {function(number):number|Array<number>} wave
  */
-export function playSoundWave(wave) {
-    if (wave.length == 0) {
+export function playSoundWave(pitch) {
+
+    if (buff.length == 0) {
         // Do nothing if we have a nothing-lengthed wave.
         return;
     }
     const baseVolume = 0.8;
-    const decay = 30;
-    if (wave.constructor === Array) {
+    const decay = 3;
+    if (buff.constructor === Array) {
         // transform our wave array into a function we can call
-        wave = getWaveFunction(normaliseWave(wave));
+        buff = getWaveFunction(normaliseWave(buff));
     }
 
     const audioContext = getAudioContext();
     if (audioContext === null) {
         return false;
     }
-    const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 10, SAMPLE_RATE);
+    const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 3, SAMPLE_RATE);
 
     const channel = buffer.getChannelData(0);
     for (let i = 0; i < buffer.length; i ++) {
         // Where we are in the sound, in seconds.
         const t = i / SAMPLE_RATE;
         // The waves are visually at a very low frequency, we need to bump that up a bunch
-        channel[i] += wave(baseFrequency * t);
+        channel[i] += buff(pitch * t);
     }
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
