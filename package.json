@@ -1,0 +1,54 @@
+{
+  "name": "introduction-to-fourier-transforms",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "watch": {
+    "makehtml": {
+      "patterns": [
+        "content/*.md",
+        "script/make-html.js"
+      ],
+      "extensions": "md,js"
+    },
+    "webpack": "js/**/*.js",
+    "css": "css/styles.css",
+    "img": "img/*"
+  },
+  "scripts": {
+    "start": "http-server",
+    "webpack": "webpack || exit 1",
+    "webpack-prod": "webpack --mode=production || exit 1",
+    "makehtml": "node script/make-html",
+    "css": "cp -r css build/",
+    "img": "cp -r img build/",
+    "preview": "cp preview.png build/",
+    "build": "npm run webpack && npm run makehtml && npm run css && npm run img && npm run preview",
+    "test": "jest",
+    "watch": "npm-watch",
+    "reload": "reload -b -d build"
+  },
+  "author": "Jezzamon",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.6",
+    "babel-jest": "^26.0.1",
+    "babel-loader": "^8.1.0",
+    "http-server": "^14.1.1",
+    "jest": "^26.0.1",
+    "mustache": "^4.0.1",
+    "npm-watch": "^0.11.0",
+    "regenerator-runtime": "^0.13.5",
+    "reload": "^3.2.0",
+    "showdown": "^1.9.1",
+    "webpack": "^5.76.2",
+    "webpack-cli": "^5.0.1"
+  },
+  "dependencies": {
+    "browser-image-compression": "1.0.11",
+    "fft.js": "^4.0.3",
+    "matrix-multiplication": "^0.5.2"
+  }
+}
