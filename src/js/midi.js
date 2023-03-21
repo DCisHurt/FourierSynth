@@ -43,24 +43,35 @@ function midiMessageReceived(event) {
     // http://webaudio.github.io/web-midi-api/#a-simple-monophonic-sine-wave-midi-synthesizer.
     const NOTE_ON = 9;
     const NOTE_OFF = 8;
+    const PITCH_BEND = 0xE;
 
     const cmd = event.data[0] >> 4;
     const pitch = event.data[1];
-    const velocity = (event.data.length > 2) ? event.data[2] : 1;
-
-    // You can use the timestamp to figure out the duration of each note.
-    const timestamp = Date.now();
     
     // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
     if (cmd === NOTE_OFF || (cmd === NOTE_ON && velocity === 0)) {
+        const velocity = (event.data.length > 2) ? event.data[2] : 1;
         console.log(`🎧 from ${event.srcElement.name} note off: pitch:${pitch}, velocity: ${velocity}`);
-    } else if (cmd === NOTE_ON) {
+    } 
+    else if (cmd === NOTE_ON) {
+        const velocity = (event.data.length > 2) ? event.data[2] : 1;
         console.log(`🎧 from ${event.srcElement.name} note on: pitch:${pitch}, velocity: ${velocity}`);
         playSoundWave(note2Frequency(pitch));
+    }
+    else if (cmd === PITCH_BEND) {
+        const shiftDown = event.data[1];
+        const shiftUP = event.data[2];
+        if(shiftDown){
+            console.log(`🎧 from ${event.srcElement.name} pitch shift donw:${shiftDown}`);
+        }
+        else{
+            console.log(`🎧 from ${event.srcElement.name} pitch shift up:${shiftUP}`);
+        }
+        
     }
 }
 
 
 function note2Frequency(note) {
     return 440 * Math.pow(2,(note-69)/12);
-  }
+}
