@@ -1212,6 +1212,85 @@ function resample2dData(points, numSamples) {
 
 /***/ }),
 
+/***/ "./src/js/midi.js":
+/*!************************!*\
+  !*** ./src/js/midi.js ***!
+  \************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "connectMidi": () => (/* binding */ connectMidi)
+/* harmony export */ });
+/* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
+
+function connectMidi() {
+  navigator.requestMIDIAccess().then(midi => midiReady(midi), err => console.log('Something went wrong', err));
+}
+
+function midiReady(midi) {
+  // Also react to device changes.
+  midi.addEventListener('statechange', event => initDevices(event.target));
+  initDevices(midi); // see the next section!
+}
+
+function initDevices(midi) {
+  // Reset.
+  let midiIn = [];
+  let midiOut = []; // MIDI devices that send you data.
+
+  const inputs = midi.inputs.values();
+
+  for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
+    midiIn.push(input.value);
+  } // MIDI devices that you send data to.
+
+
+  const outputs = midi.outputs.values();
+
+  for (let output = outputs.next(); output && !output.done; output = outputs.next()) {
+    midiOut.push(output.value);
+  }
+
+  for (const input of midiIn) {
+    input.addEventListener('midimessage', midiMessageReceived);
+  }
+}
+
+function midiMessageReceived(event) {
+  // MIDI commands we care about. See
+  // http://webaudio.github.io/web-midi-api/#a-simple-monophonic-sine-wave-midi-synthesizer.
+  const NOTE_ON = 9;
+  const NOTE_OFF = 8;
+  const PITCH_BEND = 0xE;
+  const cmd = event.data[0] >> 4;
+  const pitch = event.data[1]; // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
+
+  if (cmd === NOTE_OFF || cmd === NOTE_ON && velocity === 0) {
+    const velocity = event.data.length > 2 ? event.data[2] : 1;
+    console.log(`🎧 from ${event.srcElement.name} note off: pitch:${pitch}, velocity: ${velocity}`);
+  } else if (cmd === NOTE_ON) {
+    const velocity = event.data.length > 2 ? event.data[2] : 1;
+    console.log(`🎧 from ${event.srcElement.name} note on: pitch:${pitch}, velocity: ${velocity}`);
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(note2Frequency(pitch));
+  } else if (cmd === PITCH_BEND) {
+    const shiftDown = event.data[1];
+    const shiftUP = event.data[2];
+
+    if (shiftDown) {
+      console.log(`🎧 from ${event.srcElement.name} pitch shift donw:${shiftDown}`);
+    } else {
+      console.log(`🎧 from ${event.srcElement.name} pitch shift up:${shiftUP}`);
+    }
+  }
+}
+
+function note2Frequency(note) {
+  return 440 * Math.pow(2, (note - 69) / 12);
+}
+
+/***/ }),
+
 /***/ "./src/js/synth.js":
 /*!*************************!*\
   !*** ./src/js/synth.js ***!
@@ -1221,13 +1300,13 @@ function resample2dData(points, numSamples) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "SAMPLE_RATE": () => (/* binding */ SAMPLE_RATE),
-/* harmony export */   "baseFrequency": () => (/* binding */ baseFrequency),
-/* harmony export */   "playSoundWave": () => (/* binding */ playSoundWave)
+/* harmony export */   "playSoundWave": () => (/* binding */ playSoundWave),
+/* harmony export */   "updateBuffer": () => (/* binding */ updateBuffer)
 /* harmony export */ });
 /* harmony import */ var _wave_things_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./wave-things.js */ "./src/js/wave-things.js");
 
 const SAMPLE_RATE = 44100;
-const baseFrequency = 440;
+var buff = [];
 let audioContext = null;
 
 function getAudioContext() {
@@ -1244,24 +1323,30 @@ function getAudioContext() {
 
   return audioContext;
 }
+
+function updateBuffer(wave) {
+  buff = wave;
+} // export function updatePitch(freq) {
+//     pitch = freq;
+// }
+
 /**
  *
  * @param {function(number):number|Array<number>} wave
  */
 
-
-function playSoundWave(wave) {
-  if (wave.length == 0) {
+function playSoundWave(pitch) {
+  if (buff.length == 0) {
     // Do nothing if we have a nothing-lengthed wave.
     return;
   }
 
   const baseVolume = 0.8;
-  const decay = 30;
+  const decay = 3;
 
-  if (wave.constructor === Array) {
+  if (buff.constructor === Array) {
     // transform our wave array into a function we can call
-    wave = (0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.getWaveFunction)((0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.normaliseWave)(wave));
+    buff = (0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.getWaveFunction)((0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.normaliseWave)(buff));
   }
 
   const audioContext = getAudioContext();
@@ -1270,14 +1355,14 @@ function playSoundWave(wave) {
     return false;
   }
 
-  const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 10, SAMPLE_RATE);
+  const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 3, SAMPLE_RATE);
   const channel = buffer.getChannelData(0);
 
   for (let i = 0; i < buffer.length; i++) {
     // Where we are in the sound, in seconds.
     const t = i / SAMPLE_RATE; // The waves are visually at a very low frequency, we need to bump that up a bunch
 
-    channel[i] += wave(baseFrequency * t);
+    channel[i] += buff(pitch * t);
   }
 
   const source = audioContext.createBufferSource();
@@ -1586,6 +1671,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _controller_wave_draw_controller_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./controller/wave-draw-controller.js */ "./src/js/controller/wave-draw-controller.js");
 /* harmony import */ var _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./controller/range-controller.js */ "./src/js/controller/range-controller.js");
 /* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
+/* harmony import */ var _midi_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./midi.js */ "./src/js/midi.js");
 // import DrawController from './controller/draw-controller.js';
 // import EpicyclesController from './controller/epicycles-controller.js';
 // import ComplexSinusoidController from './controller/complex-sinusoid-controller.js';
@@ -1606,6 +1692,7 @@ __webpack_require__.r(__webpack_exports__);
 // import { getScrollPosition } from './controller/controller-util.js';
 // import WaveSamplesController from './controller/wave-samples-controller.js';
 // import { getWave, squareWave } from './wave-things.js';
+
 
 
 
@@ -1647,6 +1734,7 @@ function init() {
       waveDrawController.onDrawingEnd.push(() => {
         waveDrawSplitController.splitAnim = true;
         waveDrawSplitController.setPath(waveDrawController.normPath);
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
       }); // Reset the slider back to 1 when the wave changes to draw the full wave.
 
       if (waveDrawSliderController) {
@@ -1659,6 +1747,7 @@ function init() {
       waveDrawSliderController.onValueChange.push(val => {
         waveDrawSplitController.fourierAmt = val;
         waveDrawSplitController.splitAnim = false;
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
       });
     }
 
@@ -1669,10 +1758,11 @@ function init() {
     const button = document.getElementById('wave-draw-button');
 
     if (button) {
-      button.addEventListener('click', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(waveDrawSplitController.partialWave));
+      button.addEventListener('click', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(440));
     }
   }
 
+  (0,_midi_js__WEBPACK_IMPORTED_MODULE_5__.connectMidi)();
   conductor = new _conductor_js__WEBPACK_IMPORTED_MODULE_0__["default"](controllers);
   conductor.start(); // To let me play around with things in the console.
 
