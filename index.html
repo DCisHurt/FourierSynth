@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html >
+<head>
+	<title>An Interactive Introduction to Fourier Transforms</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link href="styles.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<header>
+	<canvas id="header-background" class="header-background"></canvas>
+	<h1>Fourier Synth</h1>
+	<p>DCisHurt</p>
+	
+</header>
+
+<main id="content">
+	
+<div class="multi-container">
+<div class="sketch" >
+    <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
+    <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
+</div>
+<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
+</div>
+<p><input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
+<button id="wave-draw-button" class="button">Play Wave</button></p>
+</main>
+<script src="build/main.bundle.js" async></script>
+</body>
+</html>
