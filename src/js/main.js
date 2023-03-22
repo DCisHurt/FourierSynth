@@ -23,7 +23,7 @@ import Conductor from './conductor.js';
 import WaveSplitController from './controller/wave-split-controller.js';
 import WaveDrawController from './controller/wave-draw-controller.js';
 import RangeController from './controller/range-controller.js';
-import { playSoundWave, updateBuffer } from './synth.js';
+import { playSoundWave, updateBuffer, initAudioContext } from './synth.js';
 
 import { connectMidi } from './midi.js';
 
@@ -32,6 +32,8 @@ let conductor = null;
 function init() {
 
     let controllers = [];
+
+    initAudioContext();
 
     let waveDrawController, waveDrawSliderController, waveDrawButton, waveDrawSplitController;
     if (hasElement('wave-draw')) {
@@ -55,6 +57,7 @@ function init() {
             waveDrawController.onDrawingStart.push(() => {
                 waveDrawSplitController.splitAnim = true;
                 waveDrawSplitController.setPath([]);
+                // updateBuffer(waveDrawSplitController.partialWave);
             });
             waveDrawController.onDrawingEnd.push(() => {
                 waveDrawSplitController.splitAnim = true;
@@ -65,6 +68,7 @@ function init() {
             if (waveDrawSliderController) {
                 waveDrawController.onDrawingStart.push(() => waveDrawSliderController.slider.value = 1);
                 waveDrawController.onDrawingEnd.push(() => waveDrawSliderController.slider.value = 1);
+                updateBuffer(waveDrawSplitController.partialWave);
             }
         }
         if (waveDrawSliderController != null) {

@@ -1,4 +1,4 @@
-import { playSoundWave } from './synth.js';
+import { playSoundWave, stopSoundWave, pitchShift } from './synth.js';
 
 
 export function connectMidi() {
@@ -14,6 +14,7 @@ function midiReady(midi) {
     midi.addEventListener('statechange', (event) => initDevices(event.target));
     initDevices(midi); // see the next section!
 }
+
 
 
 function initDevices(midi) {
@@ -47,26 +48,31 @@ function midiMessageReceived(event) {
     const velocity = (event.data.length > 2) ? event.data[2] : 1;
     const cmd = event.data[0] >> 4;
     const channel = event.data[0] & 0x0F;
-    const pitch = event.data[1];
+    const pitch = event.data[1]+12;
     
     // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
     if (cmd === NOTE_OFF || (cmd === NOTE_ON && velocity === 0)) {
         console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${pitch}`);
+        stopSoundWave(channel);
     } 
     else if (cmd === NOTE_ON) {
         console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${pitch}, velocity: ${velocity}`);
-        playSoundWave(note2Frequency(pitch));
+        playSoundWave(channel,note2Frequency(pitch));
     }
     else if (cmd === PITCH_BEND) {
         const shiftDown = event.data[1];
         const shiftUP = event.data[2];
-        if(shiftDown){
-            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift +${shiftDown}`);
+
+        const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
+        console.log(bend);
+
+        if(shiftUP){
+            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift +${shiftUP}`);
         }
         else{
-            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift -${shiftUP}`);
+            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift -${shiftDown}`);
         }
-        
+        pitchShift(channel,bend);
     }
 }
 

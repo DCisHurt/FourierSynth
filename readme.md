@@ -1,3 +1,3 @@
-## The project is under development
+# The project is under development
 
 ## [Demo](https://dcishurt.github.io/FourierSynth/)
