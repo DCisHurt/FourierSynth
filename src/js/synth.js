@@ -60,7 +60,7 @@ export function playSoundWave(ch, pitch) {
     osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
 
     osc[ch].connect(audioContext.destination);
-    
+    console.log(`channel" ${ch} "on`);
     // if (buff.length == 0) {
     //     // Do nothing if we have a nothing-lengthed wave.
     //     return;

@@ -16,7 +16,6 @@ function midiReady(midi) {
 }
 
 
-
 function initDevices(midi) {
     // Reset.
     let midiIn = [];
@@ -60,19 +59,9 @@ function midiMessageReceived(event) {
         playSoundWave(channel,note2Frequency(pitch));
     }
     else if (cmd === PITCH_BEND) {
-        const shiftDown = event.data[1];
-        const shiftUP = event.data[2];
-
         const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
-        console.log(bend);
-
-        if(shiftUP){
-            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift +${shiftUP}`);
-        }
-        else{
-            console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift -${shiftDown}`);
-        }
-        pitchShift(channel,bend);
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
+        pitchShift(channel, bend);
     }
 }
 
