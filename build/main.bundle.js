@@ -1104,6 +1104,7 @@ class Conductor {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "getFourierData": () => (/* binding */ getFourierData),
+/* harmony export */   "getFourierRI": () => (/* binding */ getFourierRI),
 /* harmony export */   "getRealFourierData": () => (/* binding */ getRealFourierData),
 /* harmony export */   "resample2dData": () => (/* binding */ resample2dData)
 /* harmony export */ });
@@ -1209,6 +1210,41 @@ function resample2dData(points, numSamples) {
 
   return newPoints;
 }
+/**
+ * Do the fourier thing using a bunch of complex points
+ *
+ * @param {Array<Number>} points Array of points, alternative with re, im pairs. Length must be a power of 2
+ */
+
+function getFourierRI(points) {
+  if (points.length == 0) {
+    return [];
+  }
+
+  const numPoints = points.length / 2;
+  const fft = new _fft_js__WEBPACK_IMPORTED_MODULE_0__["default"](numPoints);
+  const out = fft.createComplexArray();
+  fft.toComplexArray(points, out);
+  console.log(out); // Transform into an API of points I find friendlier.
+  // const fftData = [];
+  // for (let i = 0; i < numPoints; i ++) {
+  //     // to reorder the frequencies a little nicer, we pick from the front and back altermatively
+  //     const j = i % 2 == 0 ? i / 2 : numPoints - ((i+1) / 2);
+  //     const x = out[2 * j];
+  //     const y = out[2 * j + 1];
+  //     const freq = ((j + numPoints / 2) % numPoints) - numPoints / 2;
+  //     fftData.push({
+  //         freq: freq,
+  //         // a little expensive
+  //         amplitude: Math.sqrt(x * x + y * y) / numPoints,
+  //         // a lottle expensive :(
+  //         phase: Math.atan2(y, x),
+  //     });
+  // }
+  // // fftData.sort((a, b) => b.amplitude - a.amplitude);
+
+  return out;
+}
 
 /***/ }),
 
@@ -1266,22 +1302,18 @@ function midiMessageReceived(event) {
   const velocity = event.data.length > 2 ? event.data[2] : 1;
   const cmd = event.data[0] >> 4;
   const channel = event.data[0] & 0x0F;
-  const pitch = event.data[1]; // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
+  const pitch = event.data[1] + 12; // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
 
   if (cmd === NOTE_OFF || cmd === NOTE_ON && velocity === 0) {
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${pitch}`);
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.stopSoundWave)(channel);
   } else if (cmd === NOTE_ON) {
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${pitch}, velocity: ${velocity}`);
-    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(note2Frequency(pitch));
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(pitch));
   } else if (cmd === PITCH_BEND) {
-    const shiftDown = event.data[1];
-    const shiftUP = event.data[2];
-
-    if (shiftDown) {
-      console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift +${shiftDown}`);
-    } else {
-      console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift -${shiftUP}`);
-    }
+    const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.pitchShift)(channel, bend);
   }
 }
 
@@ -1299,81 +1331,101 @@ function note2Frequency(note) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "SAMPLE_RATE": () => (/* binding */ SAMPLE_RATE),
+/* harmony export */   "initAudioContext": () => (/* binding */ initAudioContext),
+/* harmony export */   "pitchShift": () => (/* binding */ pitchShift),
 /* harmony export */   "playSoundWave": () => (/* binding */ playSoundWave),
+/* harmony export */   "stopSoundWave": () => (/* binding */ stopSoundWave),
 /* harmony export */   "updateBuffer": () => (/* binding */ updateBuffer)
 /* harmony export */ });
 /* harmony import */ var _wave_things_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./wave-things.js */ "./src/js/wave-things.js");
+/* harmony import */ var _fft_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./fft.js */ "./src/js/fft.js");
 
-const SAMPLE_RATE = 44100;
-var buff = [];
+
 let audioContext = null;
-
-function getAudioContext() {
+let osc = [];
+function initAudioContext() {
   if (audioContext === null) {
-    const AudioContext = window.AudioContext || window.webkitAudioContext || false;
+    audioContext = new AudioContext();
 
-    if (!AudioContext) {
-      // Web Audio API not supported :(
-      return null;
+    for (let i = 0; i < 16; i++) {
+      osc[i] = audioContext.createOscillator();
+      osc[i].start();
+    }
+  }
+}
+function updateBuffer(wave) {
+  if (wave.length > 0) {
+    const numPoints = wave.length;
+    const fft = new _fft_js__WEBPACK_IMPORTED_MODULE_1__["default"](numPoints);
+    const formatedPoints = fft.createComplexArray();
+    fft.toComplexArray(wave, formatedPoints);
+    const out = fft.createComplexArray();
+    fft.transform(out, formatedPoints);
+    const l = out.length / 2;
+    const real = new Float32Array(l);
+    const imag = new Float32Array(l);
+
+    for (let i = 0; i < l; i++) {
+      real[i] = out[i * 2];
+      imag[i] = out[i * 2 + 1];
     }
 
-    audioContext = new AudioContext();
+    const wave2 = audioContext.createPeriodicWave(real, imag);
+
+    for (let i = 0; i < 16; i++) {
+      osc[i].setPeriodicWave(wave2);
+    }
+
+    console.log("update");
+  } else {
+    console.log("update fail");
   }
-
-  return audioContext;
 }
-
-function updateBuffer(wave) {
-  buff = wave;
-} // export function updatePitch(freq) {
-//     pitch = freq;
-// }
-
 /**
  *
  * @param {function(number):number|Array<number>} wave
  */
 
-function playSoundWave(pitch) {
-  if (buff.length == 0) {
-    // Do nothing if we have a nothing-lengthed wave.
-    return;
-  }
-
-  const baseVolume = 0.8;
-  const decay = 3;
-
-  if (buff.constructor === Array) {
-    // transform our wave array into a function we can call
-    buff = (0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.getWaveFunction)((0,_wave_things_js__WEBPACK_IMPORTED_MODULE_0__.normaliseWave)(buff));
-  }
-
-  const audioContext = getAudioContext();
-
-  if (audioContext === null) {
-    return false;
-  }
-
-  const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 3, SAMPLE_RATE);
-  const channel = buffer.getChannelData(0);
-
-  for (let i = 0; i < buffer.length; i++) {
-    // Where we are in the sound, in seconds.
-    const t = i / SAMPLE_RATE; // The waves are visually at a very low frequency, we need to bump that up a bunch
-
-    channel[i] += buff(pitch * t);
-  }
-
-  const source = audioContext.createBufferSource();
-  source.buffer = buffer;
-  const gainNode = audioContext.createGain();
-  gainNode.gain.setValueAtTime(baseVolume, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + decay);
-  source.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  source.start();
-  source.stop(audioContext.currentTime + decay);
+function playSoundWave(ch, pitch) {
+  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+  osc[ch].connect(audioContext.destination);
+  console.log(`channel" ${ch} "on`); // if (buff.length == 0) {
+  //     // Do nothing if we have a nothing-lengthed wave.
+  //     return;
+  // }
+  // const baseVolume = 0.8;
+  // const decay = 3;
+  // if (buff.constructor === Array) {
+  //     // transform our wave array into a function we can call
+  //     buff = getWaveFunction(normaliseWave(buff));
+  // }
+  // const audioContext = getAudioContext();
+  // if (audioContext === null) {
+  //     return false;
+  // }
+  // const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 3, SAMPLE_RATE);
+  // const channel = buffer.getChannelData(0);
+  // for (let i = 0; i < buffer.length; i ++) {
+  //     // Where we are in the sound, in seconds.
+  //     const t = i / SAMPLE_RATE;
+  //     // The waves are visually at a very low frequency, we need to bump that up a bunch
+  //     channel[i] += buff(pitch * t);
+  // }
+  // const source = audioContext.createBufferSource();
+  // source.buffer = buffer;
+  // const gainNode = audioContext.createGain();
+  // gainNode.gain.setValueAtTime(baseVolume, audioContext.currentTime);
+  // gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + decay);
+  // source.connect(gainNode);
+  // gainNode.connect(audioContext.destination);
+  // source.start();
+  // source.stop(audioContext.currentTime + decay);
+}
+function stopSoundWave(ch) {
+  osc[ch].disconnect(audioContext.destination);
+}
+function pitchShift(ch, pitch) {
+  osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
 }
 
 /***/ }),
@@ -1702,6 +1754,7 @@ let conductor = null;
 
 function init() {
   let controllers = [];
+  (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.initAudioContext)();
   let waveDrawController, waveDrawSliderController, waveDrawButton, waveDrawSplitController;
 
   if (hasElement('wave-draw')) {
@@ -1729,7 +1782,7 @@ function init() {
     if (waveDrawController != null) {
       waveDrawController.onDrawingStart.push(() => {
         waveDrawSplitController.splitAnim = true;
-        waveDrawSplitController.setPath([]);
+        waveDrawSplitController.setPath([]); // updateBuffer(waveDrawSplitController.partialWave);
       });
       waveDrawController.onDrawingEnd.push(() => {
         waveDrawSplitController.splitAnim = true;
@@ -1740,6 +1793,7 @@ function init() {
       if (waveDrawSliderController) {
         waveDrawController.onDrawingStart.push(() => waveDrawSliderController.slider.value = 1);
         waveDrawController.onDrawingEnd.push(() => waveDrawSliderController.slider.value = 1);
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
       }
     }
 
