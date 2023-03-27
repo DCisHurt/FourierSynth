@@ -4,15 +4,11 @@ import FFT from './fft.js';
 
 let audioContext = null;
 let osc = [];
-
+let wave2 = null; 
 
 export function initAudioContext() {
     if (audioContext === null) {   
         audioContext = new AudioContext();
-        for (let i = 0; i < 16; i ++) {
-            osc[i] = audioContext.createOscillator();
-            osc[i].start();
-        }
     }
 }
 
@@ -37,10 +33,12 @@ export function updateBuffer(wave) {
             real[i] = out[i*2];
             imag[i] = out[i*2 + 1];
         }
-        const wave2 = audioContext.createPeriodicWave(real, imag);
+        wave2 = audioContext.createPeriodicWave(real, imag);
 
         for (let i = 0; i < 16; i ++) {
-            osc[i].setPeriodicWave(wave2);
+            if(osc[i] != null){
+                osc[i].setPeriodicWave(wave2);
+            }
         }
         console.log("update");
     }
@@ -56,11 +54,22 @@ export function updateBuffer(wave) {
  * @param {function(number):number|Array<number>} wave
  */
 export function playSoundWave(ch, pitch) {
+    
+    console.log(`channel" ${ch} "on`);
+    
+    osc[ch] = audioContext.createOscillator();
+
+    osc[ch].setPeriodicWave(wave2);
+    
 
     osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+    
+    // osc[ch].setPeriodicWave(wave2);
 
     osc[ch].connect(audioContext.destination);
-    console.log(`channel" ${ch} "on`);
+    osc[ch].start(0);
+    
+
     // if (buff.length == 0) {
     //     // Do nothing if we have a nothing-lengthed wave.
     //     return;
@@ -101,9 +110,15 @@ export function playSoundWave(ch, pitch) {
 
 
 export function stopSoundWave(ch) {
-    osc[ch].disconnect(audioContext.destination);
+    if(osc[ch] != null){
+        console.log(`channel" ${ch} "off`);
+        osc[ch].stop();
+        osc[ch] = null;
+    }
 }
 
 export function pitchShift(ch, pitch) {
-    osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+    if(osc[ch] != null){
+        osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+    }
 }

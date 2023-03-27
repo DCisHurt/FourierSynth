@@ -23,7 +23,7 @@ import Conductor from './conductor.js';
 import WaveSplitController from './controller/wave-split-controller.js';
 import WaveDrawController from './controller/wave-draw-controller.js';
 import RangeController from './controller/range-controller.js';
-import { playSoundWave, updateBuffer, initAudioContext } from './synth.js';
+import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext } from './synth.js';
 
 import { connectMidi } from './midi.js';
 
@@ -32,8 +32,6 @@ let conductor = null;
 function init() {
 
     let controllers = [];
-
-    initAudioContext();
 
     let waveDrawController, waveDrawSliderController, waveDrawButton, waveDrawSplitController;
     if (hasElement('wave-draw')) {
@@ -83,10 +81,13 @@ function init() {
     if (hasElement('wave-draw-button')) {
         const button = document.getElementById('wave-draw-button');
         if (button) {
-            button.addEventListener('click', () => playSoundWave(440));
+            button.addEventListener('mousedown', () => playSoundWave(0, 440));
+            button.addEventListener('mouseout', () => stopSoundWave(0));
+            button.addEventListener('mouseup', () => stopSoundWave(0));
         }
     }
 
+    initAudioContext();
     connectMidi();
 
     conductor = new Conductor(controllers);

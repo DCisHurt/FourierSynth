@@ -1343,14 +1343,10 @@ __webpack_require__.r(__webpack_exports__);
 
 let audioContext = null;
 let osc = [];
+let wave2 = null;
 function initAudioContext() {
   if (audioContext === null) {
     audioContext = new AudioContext();
-
-    for (let i = 0; i < 16; i++) {
-      osc[i] = audioContext.createOscillator();
-      osc[i].start();
-    }
   }
 }
 function updateBuffer(wave) {
@@ -1370,10 +1366,12 @@ function updateBuffer(wave) {
       imag[i] = out[i * 2 + 1];
     }
 
-    const wave2 = audioContext.createPeriodicWave(real, imag);
+    wave2 = audioContext.createPeriodicWave(real, imag);
 
     for (let i = 0; i < 16; i++) {
-      osc[i].setPeriodicWave(wave2);
+      if (osc[i] != null) {
+        osc[i].setPeriodicWave(wave2);
+      }
     }
 
     console.log("update");
@@ -1387,9 +1385,13 @@ function updateBuffer(wave) {
  */
 
 function playSoundWave(ch, pitch) {
-  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+  console.log(`channel" ${ch} "on`);
+  osc[ch] = audioContext.createOscillator();
+  osc[ch].setPeriodicWave(wave2);
+  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime); // osc[ch].setPeriodicWave(wave2);
+
   osc[ch].connect(audioContext.destination);
-  console.log(`channel" ${ch} "on`); // if (buff.length == 0) {
+  osc[ch].start(0); // if (buff.length == 0) {
   //     // Do nothing if we have a nothing-lengthed wave.
   //     return;
   // }
@@ -1422,10 +1424,16 @@ function playSoundWave(ch, pitch) {
   // source.stop(audioContext.currentTime + decay);
 }
 function stopSoundWave(ch) {
-  osc[ch].disconnect(audioContext.destination);
+  if (osc[ch] != null) {
+    console.log(`channel" ${ch} "off`);
+    osc[ch].stop();
+    osc[ch] = null;
+  }
 }
 function pitchShift(ch, pitch) {
-  osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+  if (osc[ch] != null) {
+    osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+  }
 }
 
 /***/ }),
@@ -1754,7 +1762,6 @@ let conductor = null;
 
 function init() {
   let controllers = [];
-  (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.initAudioContext)();
   let waveDrawController, waveDrawSliderController, waveDrawButton, waveDrawSplitController;
 
   if (hasElement('wave-draw')) {
@@ -1812,10 +1819,13 @@ function init() {
     const button = document.getElementById('wave-draw-button');
 
     if (button) {
-      button.addEventListener('click', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(440));
+      button.addEventListener('mousedown', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(0, 440));
+      button.addEventListener('mouseout', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
+      button.addEventListener('mouseup', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
     }
   }
 
+  (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.initAudioContext)();
   (0,_midi_js__WEBPACK_IMPORTED_MODULE_5__.connectMidi)();
   conductor = new _conductor_js__WEBPACK_IMPORTED_MODULE_0__["default"](controllers);
   conductor.start(); // To let me play around with things in the console.
