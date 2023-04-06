@@ -1,5 +1,6 @@
-import { playSoundWave, stopSoundWave, pitchShift } from './synth.js';
+import { playSoundWave, stopSoundWave, pitchShift, volumeShift } from './synth.js';
 
+export let nPionts = [];
 
 export function connectMidi() {
 
@@ -44,24 +45,34 @@ function midiMessageReceived(event) {
     const NOTE_ON = 9;
     const NOTE_OFF = 8;
     const PITCH_BEND = 0xE;
+    const AFTER_TOUCH = 0xD;
+    const CONTROL_CHANGE = 0xB;
     const velocity = (event.data.length > 2) ? event.data[2] : 1;
     const cmd = event.data[0] >> 4;
     const channel = event.data[0] & 0x0F;
-    const pitch = event.data[1]+12;
+    const value = event.data[1];
     
     // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
     if (cmd === NOTE_OFF || (cmd === NOTE_ON && velocity === 0)) {
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${pitch}`);
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${value}`);
         stopSoundWave(channel);
     } 
     else if (cmd === NOTE_ON) {
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${pitch}, velocity: ${velocity}`);
-        playSoundWave(channel,note2Frequency(pitch));
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}, velocity: ${velocity}`);
+        playSoundWave(channel,note2Frequency(value));
     }
     else if (cmd === PITCH_BEND) {
         const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
         console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
         pitchShift(channel, bend);
+    }
+    else if (cmd === AFTER_TOUCH) {
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
+        volumeShift(channel, value);
+    }
+    else if (cmd === CONTROL_CHANGE) {
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, CC:${value}`);
+        nPionts.forEach(fn => fn(velocity / 127));
     }
 }
 

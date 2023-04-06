@@ -1256,10 +1256,12 @@ function getFourierRI(points) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "connectMidi": () => (/* binding */ connectMidi)
+/* harmony export */   "connectMidi": () => (/* binding */ connectMidi),
+/* harmony export */   "nPionts": () => (/* binding */ nPionts)
 /* harmony export */ });
 /* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
 
+let nPionts = [];
 function connectMidi() {
   navigator.requestMIDIAccess().then(midi => midiReady(midi), err => console.log('Something went wrong', err));
 }
@@ -1299,21 +1301,29 @@ function midiMessageReceived(event) {
   const NOTE_ON = 9;
   const NOTE_OFF = 8;
   const PITCH_BEND = 0xE;
+  const AFTER_TOUCH = 0xD;
+  const CONTROL_CHANGE = 0xB;
   const velocity = event.data.length > 2 ? event.data[2] : 1;
   const cmd = event.data[0] >> 4;
   const channel = event.data[0] & 0x0F;
-  const pitch = event.data[1] + 12; // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
+  const value = event.data[1]; // Note that not all MIDI controllers send a separate NOTE_OFF command for every NOTE_ON.
 
   if (cmd === NOTE_OFF || cmd === NOTE_ON && velocity === 0) {
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${pitch}`);
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${value}`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.stopSoundWave)(channel);
   } else if (cmd === NOTE_ON) {
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${pitch}, velocity: ${velocity}`);
-    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(pitch));
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}, velocity: ${velocity}`);
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(value));
   } else if (cmd === PITCH_BEND) {
     const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.pitchShift)(channel, bend);
+  } else if (cmd === AFTER_TOUCH) {
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.volumeShift)(channel, value);
+  } else if (cmd === CONTROL_CHANGE) {
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, CC:${value}`);
+    nPionts.forEach(fn => fn(velocity / 127));
   }
 }
 
@@ -1335,7 +1345,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "pitchShift": () => (/* binding */ pitchShift),
 /* harmony export */   "playSoundWave": () => (/* binding */ playSoundWave),
 /* harmony export */   "stopSoundWave": () => (/* binding */ stopSoundWave),
-/* harmony export */   "updateBuffer": () => (/* binding */ updateBuffer)
+/* harmony export */   "updateBuffer": () => (/* binding */ updateBuffer),
+/* harmony export */   "volumeShift": () => (/* binding */ volumeShift)
 /* harmony export */ });
 /* harmony import */ var _wave_things_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./wave-things.js */ "./src/js/wave-things.js");
 /* harmony import */ var _fft_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./fft.js */ "./src/js/fft.js");
@@ -1343,6 +1354,7 @@ __webpack_require__.r(__webpack_exports__);
 
 let audioContext = null;
 let osc = [];
+let gain = [];
 let wave2 = null;
 function initAudioContext() {
   if (audioContext === null) {
@@ -1387,11 +1399,14 @@ function updateBuffer(wave) {
 function playSoundWave(ch, pitch) {
   console.log(`channel" ${ch} "on`);
   osc[ch] = audioContext.createOscillator();
+  gain[ch] = audioContext.createGain();
   osc[ch].setPeriodicWave(wave2);
-  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime); // osc[ch].setPeriodicWave(wave2);
-
-  osc[ch].connect(audioContext.destination);
-  osc[ch].start(0); // if (buff.length == 0) {
+  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+  gain[ch].gain.setValueAtTime(1, audioContext.currentTime);
+  gain[ch].gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 3);
+  osc[ch].connect(gain[ch]);
+  gain[ch].connect(audioContext.destination);
+  osc[ch].start(3); // if (buff.length == 0) {
   //     // Do nothing if we have a nothing-lengthed wave.
   //     return;
   // }
@@ -1426,13 +1441,18 @@ function playSoundWave(ch, pitch) {
 function stopSoundWave(ch) {
   if (osc[ch] != null) {
     console.log(`channel" ${ch} "off`);
-    osc[ch].stop();
+    osc[ch].stop(3);
     osc[ch] = null;
   }
 }
 function pitchShift(ch, pitch) {
   if (osc[ch] != null) {
-    osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+    osc[ch].detune.setValueAtTime(pitch * 1200 * 2, audioContext.currentTime);
+  }
+}
+function volumeShift(ch, vol) {
+  if (osc[ch] != null) {
+    gain[ch].gain.setValueAtTime(vol / 127, audioContext.currentTime);
   }
 }
 
@@ -1789,7 +1809,8 @@ function init() {
     if (waveDrawController != null) {
       waveDrawController.onDrawingStart.push(() => {
         waveDrawSplitController.splitAnim = true;
-        waveDrawSplitController.setPath([]); // updateBuffer(waveDrawSplitController.partialWave);
+        waveDrawSplitController.setPath([]);
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
       });
       waveDrawController.onDrawingEnd.push(() => {
         waveDrawSplitController.splitAnim = true;
@@ -1798,13 +1819,24 @@ function init() {
       }); // Reset the slider back to 1 when the wave changes to draw the full wave.
 
       if (waveDrawSliderController) {
-        waveDrawController.onDrawingStart.push(() => waveDrawSliderController.slider.value = 1);
-        waveDrawController.onDrawingEnd.push(() => waveDrawSliderController.slider.value = 1);
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
+        waveDrawController.onDrawingStart.push(() => {
+          waveDrawSliderController.slider.value = 1;
+          waveDrawSplitController.fourierAmt = 1;
+        });
+        waveDrawController.onDrawingEnd.push(() => {
+          waveDrawSliderController.slider.value = 1;
+          waveDrawSplitController.fourierAmt = 1;
+        });
       }
     }
 
     if (waveDrawSliderController != null) {
+      _midi_js__WEBPACK_IMPORTED_MODULE_5__.nPionts.push(val => {
+        waveDrawSplitController.fourierAmt = val;
+        waveDrawSplitController.splitAnim = false;
+        waveDrawSliderController.slider.value = val;
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
+      });
       waveDrawSliderController.onValueChange.push(val => {
         waveDrawSplitController.fourierAmt = val;
         waveDrawSplitController.splitAnim = false;
@@ -1819,7 +1851,7 @@ function init() {
     const button = document.getElementById('wave-draw-button');
 
     if (button) {
-      button.addEventListener('mousedown', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(0, 440));
+      button.addEventListener('mousedown', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(0, 260));
       button.addEventListener('mouseout', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
       button.addEventListener('mouseup', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
     }

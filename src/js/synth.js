@@ -4,6 +4,7 @@ import FFT from './fft.js';
 
 let audioContext = null;
 let osc = [];
+let gain = [];
 let wave2 = null; 
 
 export function initAudioContext() {
@@ -58,16 +59,20 @@ export function playSoundWave(ch, pitch) {
     console.log(`channel" ${ch} "on`);
     
     osc[ch] = audioContext.createOscillator();
+    gain[ch] = audioContext.createGain();
 
     osc[ch].setPeriodicWave(wave2);
     
 
     osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
     
-    // osc[ch].setPeriodicWave(wave2);
+    gain[ch].gain.setValueAtTime(1, audioContext.currentTime);
+    gain[ch].gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 3);
 
-    osc[ch].connect(audioContext.destination);
-    osc[ch].start(0);
+    osc[ch].connect(gain[ch]);
+    gain[ch].connect(audioContext.destination);
+
+    osc[ch].start(3);
     
 
     // if (buff.length == 0) {
@@ -112,13 +117,19 @@ export function playSoundWave(ch, pitch) {
 export function stopSoundWave(ch) {
     if(osc[ch] != null){
         console.log(`channel" ${ch} "off`);
-        osc[ch].stop();
+        osc[ch].stop(3);
         osc[ch] = null;
     }
 }
 
 export function pitchShift(ch, pitch) {
     if(osc[ch] != null){
-        osc[ch].detune.setValueAtTime(pitch * 1000, audioContext.currentTime);
+        osc[ch].detune.setValueAtTime(pitch * 1200 * 2, audioContext.currentTime);
+    }
+}
+
+export function volumeShift(ch, vol) {
+    if(osc[ch] != null){
+        gain[ch].gain.setValueAtTime(vol / 127, audioContext.currentTime);
     }
 }

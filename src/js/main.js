@@ -25,7 +25,7 @@ import WaveDrawController from './controller/wave-draw-controller.js';
 import RangeController from './controller/range-controller.js';
 import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext } from './synth.js';
 
-import { connectMidi } from './midi.js';
+import { nPionts, connectMidi } from './midi.js';
 
 let conductor = null;
 
@@ -55,7 +55,7 @@ function init() {
             waveDrawController.onDrawingStart.push(() => {
                 waveDrawSplitController.splitAnim = true;
                 waveDrawSplitController.setPath([]);
-                // updateBuffer(waveDrawSplitController.partialWave);
+                updateBuffer(waveDrawSplitController.partialWave);
             });
             waveDrawController.onDrawingEnd.push(() => {
                 waveDrawSplitController.splitAnim = true;
@@ -64,12 +64,24 @@ function init() {
             });
             // Reset the slider back to 1 when the wave changes to draw the full wave.
             if (waveDrawSliderController) {
-                waveDrawController.onDrawingStart.push(() => waveDrawSliderController.slider.value = 1);
-                waveDrawController.onDrawingEnd.push(() => waveDrawSliderController.slider.value = 1);
-                updateBuffer(waveDrawSplitController.partialWave);
+                waveDrawController.onDrawingStart.push(() => {
+                    waveDrawSliderController.slider.value = 1;
+                    waveDrawSplitController.fourierAmt = 1;
+                });
+                waveDrawController.onDrawingEnd.push(() =>
+                {
+                    waveDrawSliderController.slider.value = 1;
+                    waveDrawSplitController.fourierAmt = 1;
+                });
             }
         }
         if (waveDrawSliderController != null) {
+            nPionts.push(val => {
+                waveDrawSplitController.fourierAmt = val;
+                waveDrawSplitController.splitAnim = false;
+                waveDrawSliderController.slider.value = val;
+                updateBuffer(waveDrawSplitController.partialWave);
+            });
             waveDrawSliderController.onValueChange.push(val => {
                 waveDrawSplitController.fourierAmt = val;
                 waveDrawSplitController.splitAnim = false;
@@ -81,7 +93,7 @@ function init() {
     if (hasElement('wave-draw-button')) {
         const button = document.getElementById('wave-draw-button');
         if (button) {
-            button.addEventListener('mousedown', () => playSoundWave(0, 440));
+            button.addEventListener('mousedown', () => playSoundWave(0, 260));
             button.addEventListener('mouseout', () => stopSoundWave(0));
             button.addEventListener('mouseup', () => stopSoundWave(0));
         }
