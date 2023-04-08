@@ -5,12 +5,50 @@ import FFT from './fft.js';
 let audioContext = null;
 let osc = [];
 let gain = [];
-let wave2 = null; 
+let wave2 = null;
+
+let Filter = null;
+let Delay = null;
+let DelayGain = null;
+let DelayFeedback = null;
+let Distortion = null;
+let MasterVol = null;
+
+let attackTime = 0.1;
+let decayTime = 0.5;
 
 export function initAudioContext() {
     if (audioContext === null) {   
         audioContext = new AudioContext();
     }
+
+    Filter = audioContext.createBiquadFilter();
+    Filter.type = "lowpass";
+    filterCutoff(12000);
+    filterResonance(1);
+
+    Delay = audioContext.createDelay(5.0);
+    DelayFeedback = audioContext.createGain();
+    DelayGain = audioContext.createGain();
+    delayTime(0.3);
+    delayFeedback(0.5);
+    delayWet(0.5);
+
+    Distortion = audioContext.createWaveShaper();
+    drive(0);
+
+    MasterVol = audioContext.createGain();
+    masterVolume(0.5);
+
+    Distortion.connect(Filter);
+    Filter.connect(Delay);
+    Delay.connect(DelayGain);
+    DelayGain.connect(DelayFeedback);
+    DelayFeedback.connect(Delay);
+    DelayGain.connect(MasterVol);
+    Filter.connect(MasterVol);
+    
+    MasterVol.connect(audioContext.destination);
 }
 
 export function updateBuffer(wave) {
@@ -46,14 +84,9 @@ export function updateBuffer(wave) {
     else{
         console.log("update fail");
     }
-
 }
 
 
-/**
- *
- * @param {function(number):number|Array<number>} wave
- */
 export function playSoundWave(ch, pitch) {
     
     console.log(`channel" ${ch} "on`);
@@ -66,60 +99,42 @@ export function playSoundWave(ch, pitch) {
 
     osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
     
-    gain[ch].gain.setValueAtTime(1, audioContext.currentTime);
-    gain[ch].gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 3);
+    gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
+    // gain[ch].gain.exponentialRampToValueAtTime(0.5, audioContext.currentTime + 3);
+    gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
+    gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
+
 
     osc[ch].connect(gain[ch]);
-    gain[ch].connect(audioContext.destination);
+    // gain[ch].connect(Distortion);
+    gain[ch].connect(Filter);
 
-    osc[ch].start(3);
-    
 
-    // if (buff.length == 0) {
-    //     // Do nothing if we have a nothing-lengthed wave.
-    //     return;
-    // }
-    // const baseVolume = 0.8;
-    // const decay = 3;
-    // if (buff.constructor === Array) {
-    //     // transform our wave array into a function we can call
-    //     buff = getWaveFunction(normaliseWave(buff));
-    // }
+    osc[ch].start();
 
-    // const audioContext = getAudioContext();
-    // if (audioContext === null) {
-    //     return false;
-    // }
-    // const buffer = audioContext.createBuffer(1, SAMPLE_RATE * 3, SAMPLE_RATE);
-
-    // const channel = buffer.getChannelData(0);
-    // for (let i = 0; i < buffer.length; i ++) {
-    //     // Where we are in the sound, in seconds.
-    //     const t = i / SAMPLE_RATE;
-    //     // The waves are visually at a very low frequency, we need to bump that up a bunch
-    //     channel[i] += buff(pitch * t);
-    // }
-    // const source = audioContext.createBufferSource();
-    // source.buffer = buffer;
-
-    // const gainNode = audioContext.createGain();
-    // gainNode.gain.setValueAtTime(baseVolume, audioContext.currentTime);
-    // gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + decay);
-
-    // source.connect(gainNode);
-    // gainNode.connect(audioContext.destination);
-
-    // source.start();
-    // source.stop(audioContext.currentTime + decay);
 }
 
 
 export function stopSoundWave(ch) {
     if(osc[ch] != null){
         console.log(`channel" ${ch} "off`);
-        osc[ch].stop(3);
+        gain[ch].gain.cancelScheduledValues(audioContext.currentTime);
+        gain[ch].gain.setValueAtTime(gain[ch].gain.value, audioContext.currentTime);
+        gain[ch].gain.linearRampToValueAtTime(0, audioContext.currentTime + decayTime);
+        osc[ch].stop(audioContext.currentTime + decayTime);
         osc[ch] = null;
     }
+}
+
+export function attackTimeSet(value) {
+    value = Math.round(value * 100) / 100;
+    attackTime = value;
+}
+
+export function decayTimeSet(value) {
+    value = Math.round(value * 100) / 100;
+    decayTime = value;
+    console.log(decayTime);
 }
 
 export function pitchShift(ch, pitch) {
@@ -130,6 +145,60 @@ export function pitchShift(ch, pitch) {
 
 export function volumeShift(ch, vol) {
     if(osc[ch] != null){
-        gain[ch].gain.setValueAtTime(vol / 127, audioContext.currentTime);
+        // gain[ch].gain.setValueAtTime(vol / 127, audioContext.currentTime);
+        gain[ch].gain.linearRampToValueAtTime(vol / 127, audioContext.currentTime + attackTime);
     }
+}
+
+export function delayTime(time){
+    Delay.delayTime.setValueAtTime(time, audioContext.currentTime);
+}
+
+function delayFeedback(value){
+    DelayFeedback.gain.setValueAtTime(value, audioContext.currentTime);
+}
+
+export function delayWet(value){
+    DelayGain.gain.setValueAtTime(value, audioContext.currentTime);
+}
+
+export function filterCutoff(value){
+    Filter.frequency.value = value;
+}
+
+export function filterResonance(value){
+    Filter.Q.value = value;
+}
+
+export function masterVolume(value){
+    MasterVol.gain.setValueAtTime(value, audioContext.currentTime);
+}
+
+// async function createReverb() {
+//     let convolver = audioContext.createConvolver();
+  
+//     // load impulse response from file
+//     let response = await fetch("js/irRoom.wav");
+//     let arraybuffer = await response.arrayBuffer();
+//     convolver.buffer = await audioContext.decodeAudioData(arraybuffer);
+  
+//     return convolver;
+// }
+
+export function drive(amount) {
+    Distortion.curve = makeDistortionCurve(amount);
+}
+
+function makeDistortionCurve(amount) {
+    amount = Math.round(amount);
+    const k = typeof amount === "number" ? amount : 50;
+    const n_samples = 256;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+  
+    for (let i = 0; i < n_samples; i++) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
 }
