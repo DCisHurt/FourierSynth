@@ -87,7 +87,7 @@ function midiMessageReceived(event) {
                 break;
             case 3:
                 console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter CutOff:${velocity}`);
-                let freq = Math.round(Math.pow(10, (velocity / 127)*3) * 75);
+                let freq = Math.round(Math.pow(10, (velocity / 127) *3) * 24);
                 cutoffCC.forEach(fn => fn(freq));
                 break;
             case 4:

@@ -14,6 +14,8 @@ let DelayFeedback = null;
 let Distortion = null;
 let MasterVol = null;
 
+let DistortionOn = false;
+
 let attackTime = 0.1;
 let decayTime = 0.5;
 
@@ -81,9 +83,6 @@ export function updateBuffer(wave) {
         }
         console.log("update");
     }
-    // else{
-    //     console.log("update fail");
-    // }
 }
 
 
@@ -98,16 +97,18 @@ export function playSoundWave(ch, pitch) {
     osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
     
     gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
-    // gain[ch].gain.exponentialRampToValueAtTime(0.5, audioContext.currentTime + 3);
     gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
     gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
 
-
     osc[ch].connect(gain[ch]);
-    // gain[ch].connect(Distortion);
-    gain[ch].connect(Filter);
 
-
+    if(DistortionOn){
+        gain[ch].connect(Distortion);
+    }
+    else{
+        gain[ch].connect(Filter);
+    }
+    
     osc[ch].start();
 
 }
@@ -182,11 +183,19 @@ export function masterVolume(value){
 // }
 
 export function drive(amount) {
-    Distortion.curve = makeDistortionCurve(amount);
+    amount = Math.round(amount);
+    if(amount < 1){
+        DistortionOn = false;
+    }
+    else{
+        Distortion.curve = makeDistortionCurve(amount);
+        DistortionOn = true;
+    }
+    
 }
 
 function makeDistortionCurve(amount) {
-    amount = Math.round(amount);
+    
     const k = typeof amount === "number" ? amount : 50;
     const n_samples = 256;
     const curve = new Float32Array(n_samples);

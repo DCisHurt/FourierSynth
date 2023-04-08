@@ -1256,12 +1256,28 @@ function getFourierRI(points) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "attackCC": () => (/* binding */ attackCC),
 /* harmony export */   "connectMidi": () => (/* binding */ connectMidi),
-/* harmony export */   "nPionts": () => (/* binding */ nPionts)
+/* harmony export */   "cutoffCC": () => (/* binding */ cutoffCC),
+/* harmony export */   "decayCC": () => (/* binding */ decayCC),
+/* harmony export */   "delayTimeCC": () => (/* binding */ delayTimeCC),
+/* harmony export */   "delayWetCC": () => (/* binding */ delayWetCC),
+/* harmony export */   "driveCC": () => (/* binding */ driveCC),
+/* harmony export */   "masterVolCC": () => (/* binding */ masterVolCC),
+/* harmony export */   "nPiontsCC": () => (/* binding */ nPiontsCC),
+/* harmony export */   "resonanceCC": () => (/* binding */ resonanceCC)
 /* harmony export */ });
 /* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
 
-let nPionts = [];
+let nPiontsCC = [];
+let cutoffCC = [];
+let resonanceCC = [];
+let delayTimeCC = [];
+let delayWetCC = [];
+let attackCC = [];
+let decayCC = [];
+let driveCC = [];
+let masterVolCC = [];
 function connectMidi() {
   navigator.requestMIDIAccess().then(midi => midiReady(midi), err => console.log('Something went wrong', err));
 }
@@ -1315,15 +1331,71 @@ function midiMessageReceived(event) {
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}, velocity: ${velocity}`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(value));
   } else if (cmd === PITCH_BEND) {
-    const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
+    const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192; // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
+
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.pitchShift)(channel, bend);
   } else if (cmd === AFTER_TOUCH) {
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
+    // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.volumeShift)(channel, value);
   } else if (cmd === CONTROL_CHANGE) {
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, CC:${value}`);
-    nPionts.forEach(fn => fn(velocity / 127));
+    switch (value) {
+      case 2:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, nFFT:${velocity}`);
+        nPiontsCC.forEach(fn => fn(velocity / 127));
+        break;
+
+      case 3:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter CutOff:${velocity}`);
+        let freq = Math.round(Math.pow(10, velocity / 127 * 3) * 24);
+        cutoffCC.forEach(fn => fn(freq));
+        break;
+
+      case 4:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter Resonance:${velocity}`);
+        resonanceCC.forEach(fn => fn(velocity * 20 / 127 + 1));
+        break;
+
+      case 5:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Time:${velocity}`);
+        delayTimeCC.forEach(fn => fn(velocity / 127));
+        break;
+
+      case 6:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Wet:${velocity}`);
+        delayWetCC.forEach(fn => fn(velocity / 127));
+        break;
+
+      case 7:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Attack Time:${velocity}`);
+        attackCC.forEach(fn => fn(velocity * 2 / 127));
+        break;
+
+      case 8:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Decay Time:${velocity}`);
+        decayCC.forEach(fn => fn(velocity * 2 / 127));
+        break;
+
+      case 9:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Drive:${velocity}`);
+        driveCC.forEach(fn => fn(velocity * 500 / 127));
+        break;
+
+      case 10:
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Master Volume:${velocity}`);
+        masterVolCC.forEach(fn => fn(velocity / 127));
+        break;
+
+      case 11:
+        console.log(`CC + 1`);
+        break;
+
+      case 12:
+        console.log(`CC - 1`);
+        break;
+
+      default:
+        break;
+    }
   }
 }
 
@@ -1370,6 +1442,7 @@ let DelayGain = null;
 let DelayFeedback = null;
 let Distortion = null;
 let MasterVol = null;
+let DistortionOn = false;
 let attackTime = 0.1;
 let decayTime = 0.5;
 function initAudioContext() {
@@ -1426,28 +1499,28 @@ function updateBuffer(wave) {
     }
 
     console.log("update");
-  } else {
-    console.log("update fail");
   }
 }
 function playSoundWave(ch, pitch) {
-  console.log(`channel" ${ch} "on`);
   osc[ch] = audioContext.createOscillator();
   gain[ch] = audioContext.createGain();
   osc[ch].setPeriodicWave(wave2);
   osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
-  gain[ch].gain.setValueAtTime(0, audioContext.currentTime); // gain[ch].gain.exponentialRampToValueAtTime(0.5, audioContext.currentTime + 3);
-
+  gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
   gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
   gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
-  osc[ch].connect(gain[ch]); // gain[ch].connect(Distortion);
+  osc[ch].connect(gain[ch]);
 
-  gain[ch].connect(Filter);
+  if (DistortionOn) {
+    gain[ch].connect(Distortion);
+  } else {
+    gain[ch].connect(Filter);
+  }
+
   osc[ch].start();
 }
 function stopSoundWave(ch) {
   if (osc[ch] != null) {
-    console.log(`channel" ${ch} "off`);
     gain[ch].gain.cancelScheduledValues(audioContext.currentTime);
     gain[ch].gain.setValueAtTime(gain[ch].gain.value, audioContext.currentTime);
     gain[ch].gain.linearRampToValueAtTime(0, audioContext.currentTime + decayTime);
@@ -1462,7 +1535,6 @@ function attackTimeSet(value) {
 function decayTimeSet(value) {
   value = Math.round(value * 100) / 100;
   decayTime = value;
-  console.log(decayTime);
 }
 function pitchShift(ch, pitch) {
   if (osc[ch] != null) {
@@ -1504,11 +1576,17 @@ function masterVolume(value) {
 // }
 
 function drive(amount) {
-  Distortion.curve = makeDistortionCurve(amount);
+  amount = Math.round(amount);
+
+  if (amount < 1) {
+    DistortionOn = false;
+  } else {
+    Distortion.curve = makeDistortionCurve(amount);
+    DistortionOn = true;
+  }
 }
 
 function makeDistortionCurve(amount) {
-  amount = Math.round(amount);
   const k = typeof amount === "number" ? amount : 50;
   const n_samples = 256;
   const curve = new Float32Array(n_samples);
@@ -1897,7 +1975,7 @@ function init() {
     }
 
     if (waveDrawSliderController != null) {
-      _midi_js__WEBPACK_IMPORTED_MODULE_5__.nPionts.push(val => {
+      _midi_js__WEBPACK_IMPORTED_MODULE_5__.nPiontsCC.push(val => {
         waveDrawSplitController.fourierAmt = val;
         waveDrawSplitController.splitAnim = false;
         waveDrawSliderController.slider.value = val;
@@ -1929,6 +2007,10 @@ function init() {
     cutoffSliderController.onValueChange.push(val => {
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterCutoff)(val);
     });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.cutoffCC.push(val => {
+      cutoffSliderController.slider.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterCutoff)(val);
+    });
     controllers.push(cutoffSliderController);
   }
 
@@ -1936,6 +2018,10 @@ function init() {
     let resonanceSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('resonance-slider');
     resonanceSliderController.animate = false;
     resonanceSliderController.onValueChange.push(val => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterResonance)(val);
+    });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.resonanceCC.push(val => {
+      resonanceSliderController.slider.value = val;
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterResonance)(val);
     });
     controllers.push(resonanceSliderController);
@@ -1947,6 +2033,10 @@ function init() {
     delayTimeSliderController.onValueChange.push(val => {
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayTime)(val);
     });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.delayTimeCC.push(val => {
+      delayTimeSliderController.slider.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayTime)(val);
+    });
     controllers.push(delayTimeSliderController);
   }
 
@@ -1954,6 +2044,10 @@ function init() {
     let delayWetSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('delay-wet-slider');
     delayWetSliderController.animate = false;
     delayWetSliderController.onValueChange.push(val => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayWet)(val);
+    });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.delayWetCC.push(val => {
+      delayWetSliderController.slider.value = val;
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayWet)(val);
     });
     controllers.push(delayWetSliderController);
@@ -1965,6 +2059,10 @@ function init() {
     attackSliderController.onValueChange.push(val => {
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.attackTimeSet)(val);
     });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.attackCC.push(val => {
+      attackSliderController.slider.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.attackTimeSet)(val);
+    });
     controllers.push(attackSliderController);
   }
 
@@ -1972,6 +2070,10 @@ function init() {
     let decaySliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('decay-slider');
     decaySliderController.animate = false;
     decaySliderController.onValueChange.push(val => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.decayTimeSet)(val);
+    });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.decayCC.push(val => {
+      decaySliderController.slider.value = val;
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.decayTimeSet)(val);
     });
     controllers.push(decaySliderController);
@@ -1983,6 +2085,10 @@ function init() {
     driveSliderController.onValueChange.push(val => {
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.drive)(val);
     });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.driveCC.push(val => {
+      driveSliderController.slider.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.drive)(val);
+    });
     controllers.push(driveSliderController);
   }
 
@@ -1990,6 +2096,10 @@ function init() {
     let masterSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('master-slider');
     masterSliderController.animate = false;
     masterSliderController.onValueChange.push(val => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.masterVolume)(val);
+    });
+    _midi_js__WEBPACK_IMPORTED_MODULE_5__.masterVolCC.push(val => {
+      masterSliderController.slider.value = val;
       (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.masterVolume)(val);
     });
     controllers.push(masterSliderController);
