@@ -26,8 +26,8 @@ import RangeController from './controller/range-controller.js';
 import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext, delayTime, delayWet
 , filterCutoff, filterResonance, drive, masterVolume, attackTimeSet, decayTimeSet } from './synth.js';
 
-import { nPionts, connectMidi } from './midi.js';
-
+import { connectMidi, nPiontsCC, cutoffCC, resonanceCC, delayTimeCC, delayWetCC,
+         attackCC, decayCC, driveCC, masterVolCC } from './midi.js';
 let conductor = null;
 
 function init() {
@@ -77,7 +77,7 @@ function init() {
             }
         }
         if (waveDrawSliderController != null) {
-            nPionts.push(val => {
+            nPiontsCC.push(val => {
                 waveDrawSplitController.fourierAmt = val;
                 waveDrawSplitController.splitAnim = false;
                 waveDrawSliderController.slider.value = val;
@@ -100,11 +100,14 @@ function init() {
         }
     }
 
-
     if (hasElement('cutoff-slider')) {
         let cutoffSliderController = new RangeController('cutoff-slider');
         cutoffSliderController.animate = false;
         cutoffSliderController.onValueChange.push(val => {
+            filterCutoff(val);
+        });
+        cutoffCC.push(val => {
+            cutoffSliderController.slider.value = val;
             filterCutoff(val);
         });
         controllers.push(cutoffSliderController);
@@ -116,6 +119,10 @@ function init() {
         resonanceSliderController.onValueChange.push(val => {
             filterResonance(val);
         });
+        resonanceCC.push(val => {
+            resonanceSliderController.slider.value = val;
+            filterResonance(val);
+        });
         controllers.push(resonanceSliderController);
     }
 
@@ -123,6 +130,10 @@ function init() {
         let delayTimeSliderController = new RangeController('delay-time-slider');
         delayTimeSliderController.animate = false;     
         delayTimeSliderController.onValueChange.push(val => {
+            delayTime(val);
+        });
+        delayTimeCC.push(val => {
+            delayTimeSliderController.slider.value = val;
             delayTime(val);
         });
         controllers.push(delayTimeSliderController);
@@ -134,6 +145,10 @@ function init() {
         delayWetSliderController.onValueChange.push(val => {
             delayWet(val);
         });
+        delayWetCC.push(val => {
+            delayWetSliderController.slider.value = val;
+            delayWet(val);
+        });
         controllers.push(delayWetSliderController);
     }
 
@@ -141,6 +156,10 @@ function init() {
         let attackSliderController = new RangeController('attack-slider');
         attackSliderController.animate = false;
         attackSliderController.onValueChange.push(val => {
+            attackTimeSet(val);
+        });
+        attackCC.push(val => {
+            attackSliderController.slider.value = val;
             attackTimeSet(val);
         });
         controllers.push(attackSliderController);
@@ -152,6 +171,10 @@ function init() {
         decaySliderController.onValueChange.push(val => {
             decayTimeSet(val);
         });
+        decayCC.push(val => {
+            decaySliderController.slider.value = val;
+            decayTimeSet(val);
+        });
         controllers.push(decaySliderController);
     }
 
@@ -161,6 +184,10 @@ function init() {
         driveSliderController.onValueChange.push(val => {
             drive(val);
         });
+        driveCC.push(val => {
+            driveSliderController.slider.value = val;
+            drive(val);
+        });
         controllers.push(driveSliderController);
     }
 
@@ -168,6 +195,10 @@ function init() {
         let masterSliderController = new RangeController('master-slider');
         masterSliderController.animate = false;
         masterSliderController.onValueChange.push(val => {
+            masterVolume(val);
+        });
+        masterVolCC.push(val => {
+            masterSliderController.slider.value = val;
             masterVolume(val);
         });
         controllers.push(masterSliderController);

@@ -81,16 +81,14 @@ export function updateBuffer(wave) {
         }
         console.log("update");
     }
-    else{
-        console.log("update fail");
-    }
+    // else{
+    //     console.log("update fail");
+    // }
 }
 
 
 export function playSoundWave(ch, pitch) {
-    
-    console.log(`channel" ${ch} "on`);
-    
+
     osc[ch] = audioContext.createOscillator();
     gain[ch] = audioContext.createGain();
 
@@ -117,7 +115,6 @@ export function playSoundWave(ch, pitch) {
 
 export function stopSoundWave(ch) {
     if(osc[ch] != null){
-        console.log(`channel" ${ch} "off`);
         gain[ch].gain.cancelScheduledValues(audioContext.currentTime);
         gain[ch].gain.setValueAtTime(gain[ch].gain.value, audioContext.currentTime);
         gain[ch].gain.linearRampToValueAtTime(0, audioContext.currentTime + decayTime);
@@ -134,7 +131,6 @@ export function attackTimeSet(value) {
 export function decayTimeSet(value) {
     value = Math.round(value * 100) / 100;
     decayTime = value;
-    console.log(decayTime);
 }
 
 export function pitchShift(ch, pitch) {
