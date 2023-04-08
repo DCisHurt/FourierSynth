@@ -1,6 +1,14 @@
 import { playSoundWave, stopSoundWave, pitchShift, volumeShift } from './synth.js';
 
-export let nPionts = [];
+export let nPiontsCC = [];
+export let cutoffCC = [];
+export let resonanceCC = [];
+export let delayTimeCC = [];
+export let delayWetCC = [];
+export let attackCC = [];
+export let decayCC = [];
+export let driveCC = [];
+export let masterVolCC = [];
 
 export function connectMidi() {
 
@@ -63,16 +71,62 @@ function midiMessageReceived(event) {
     }
     else if (cmd === PITCH_BEND) {
         const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
+        // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
         pitchShift(channel, bend);
     }
     else if (cmd === AFTER_TOUCH) {
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
+        // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
         volumeShift(channel, value);
     }
     else if (cmd === CONTROL_CHANGE) {
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, CC:${value}`);
-        nPionts.forEach(fn => fn(velocity / 127));
+
+        switch (value) {
+            case 2:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, nFFT:${velocity}`);
+                nPiontsCC.forEach(fn => fn(velocity / 127));
+                break;
+            case 3:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter CutOff:${velocity}`);
+                let freq = Math.round(Math.pow(10, (velocity / 127)*3) * 75);
+                cutoffCC.forEach(fn => fn(freq));
+                break;
+            case 4:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter Resonance:${velocity}`);
+                resonanceCC.forEach(fn => fn((velocity * 20 / 127) + 1));
+                break;
+            case 5:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Time:${velocity}`);
+                delayTimeCC.forEach(fn => fn(velocity / 127));
+                break;
+            case 6:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Wet:${velocity}`);
+                delayWetCC.forEach(fn => fn(velocity / 127));
+                break;
+            case 7:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Attack Time:${velocity}`);
+                attackCC.forEach(fn => fn(velocity * 2 / 127));
+                break;
+            case 8:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Decay Time:${velocity}`);
+                decayCC.forEach(fn => fn(velocity * 2 / 127));
+                break;
+            case 9:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Drive:${velocity}`);
+                driveCC.forEach(fn => fn(velocity * 500 / 127));
+                break;
+            case 10:
+                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Master Volume:${velocity}`);
+                masterVolCC.forEach(fn => fn(velocity / 127));
+                break;
+            case 11:
+                console.log(`CC + 1`);
+                break;
+            case 12:
+                console.log(`CC - 1`);
+                break;
+            default:
+                break;
+        }
     }
 }
 
