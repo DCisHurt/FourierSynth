@@ -23,7 +23,8 @@ import Conductor from './conductor.js';
 import WaveSplitController from './controller/wave-split-controller.js';
 import WaveDrawController from './controller/wave-draw-controller.js';
 import RangeController from './controller/range-controller.js';
-import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext } from './synth.js';
+import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext, delayTime, delayWet
+, filterCutoff, filterResonance, drive, masterVolume, attackTimeSet, decayTimeSet } from './synth.js';
 
 import { nPionts, connectMidi } from './midi.js';
 
@@ -98,6 +99,80 @@ function init() {
             button.addEventListener('mouseup', () => stopSoundWave(0));
         }
     }
+
+
+    if (hasElement('cutoff-slider')) {
+        let cutoffSliderController = new RangeController('cutoff-slider');
+        cutoffSliderController.animate = false;
+        cutoffSliderController.onValueChange.push(val => {
+            filterCutoff(val);
+        });
+        controllers.push(cutoffSliderController);
+    }
+
+    if (hasElement('resonance-slider')) {
+        let resonanceSliderController = new RangeController('resonance-slider');
+        resonanceSliderController.animate = false;
+        resonanceSliderController.onValueChange.push(val => {
+            filterResonance(val);
+        });
+        controllers.push(resonanceSliderController);
+    }
+
+    if (hasElement('delay-time-slider')) {
+        let delayTimeSliderController = new RangeController('delay-time-slider');
+        delayTimeSliderController.animate = false;     
+        delayTimeSliderController.onValueChange.push(val => {
+            delayTime(val);
+        });
+        controllers.push(delayTimeSliderController);
+    }
+
+    if (hasElement('delay-wet-slider')) {
+        let delayWetSliderController = new RangeController('delay-wet-slider'); 
+        delayWetSliderController.animate = false;
+        delayWetSliderController.onValueChange.push(val => {
+            delayWet(val);
+        });
+        controllers.push(delayWetSliderController);
+    }
+
+    if (hasElement('attack-slider')) {
+        let attackSliderController = new RangeController('attack-slider');
+        attackSliderController.animate = false;
+        attackSliderController.onValueChange.push(val => {
+            attackTimeSet(val);
+        });
+        controllers.push(attackSliderController);
+    }
+
+    if (hasElement('decay-slider')) {
+        let decaySliderController = new RangeController('decay-slider');
+        decaySliderController.animate = false;
+        decaySliderController.onValueChange.push(val => {
+            decayTimeSet(val);
+        });
+        controllers.push(decaySliderController);
+    }
+
+    if (hasElement('drive-slider')) {
+        let driveSliderController = new RangeController('drive-slider');
+        driveSliderController.animate = false;
+        driveSliderController.onValueChange.push(val => {
+            drive(val);
+        });
+        controllers.push(driveSliderController);
+    }
+
+    if (hasElement('master-slider')) {
+        let masterSliderController = new RangeController('master-slider');
+        masterSliderController.animate = false;
+        masterSliderController.onValueChange.push(val => {
+            masterVolume(val);
+        });
+        controllers.push(masterSliderController);
+    }
+    
 
     initAudioContext();
     connectMidi();
