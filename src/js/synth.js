@@ -26,21 +26,21 @@ export function initAudioContext() {
 
     Filter = audioContext.createBiquadFilter();
     Filter.type = "lowpass";
-    filterCutoff(12000);
+    filterCutoff(1);
     filterResonance(1);
 
     Delay = audioContext.createDelay(5.0);
     DelayFeedback = audioContext.createGain();
     DelayGain = audioContext.createGain();
     delayTime(0.3);
-    delayFeedback(0.5);
-    delayWet(0.5);
+    delayFeedback(0.8);
+    delayWet(0.3);
 
     Distortion = audioContext.createWaveShaper();
     drive(0);
 
     MasterVol = audioContext.createGain();
-    masterVolume(0.5);
+    masterVolume(0.75);
 
     Distortion.connect(Filter);
     Filter.connect(Delay);
@@ -81,7 +81,6 @@ export function updateBuffer(wave) {
                 osc[i].setPeriodicWave(wave2);
             }
         }
-        console.log("update");
     }
 }
 
@@ -125,13 +124,15 @@ export function stopSoundWave(ch) {
 }
 
 export function attackTimeSet(value) {
-    value = Math.round(value * 100) / 100;
+    value = Math.round(value * 200) / 100;
     attackTime = value;
+    console.log(`Attack Time : ${attackTime}s`);
 }
 
 export function decayTimeSet(value) {
-    value = Math.round(value * 100) / 100;
+    value = Math.round(value * 200) / 100;
     decayTime = value;
+    console.log(`Decay Time : ${decayTime}s`);
 }
 
 export function pitchShift(ch, pitch) {
@@ -148,7 +149,8 @@ export function volumeShift(ch, vol) {
 }
 
 export function delayTime(time){
-    Delay.delayTime.setValueAtTime(time, audioContext.currentTime);
+    Delay.delayTime.setValueAtTime(time*2, audioContext.currentTime);
+    console.log(`Delay Time : ${Math.round(time*200)/100}s`);
 }
 
 function delayFeedback(value){
@@ -157,18 +159,25 @@ function delayFeedback(value){
 
 export function delayWet(value){
     DelayGain.gain.setValueAtTime(value, audioContext.currentTime);
+    console.log(`Delay Wet : ${Math.round(value*100)}%`);
 }
 
 export function filterCutoff(value){
-    Filter.frequency.value = value;
+    let freq = Math.round(Math.pow(10, value * 2) * 240);
+    Filter.frequency.value = freq;
+    console.log(`Filter Cut Off : ${freq}Hz`);
 }
 
 export function filterResonance(value){
-    Filter.Q.value = value;
+    let Q =Math.round(((value * 20) + 1)*100) / 100;
+    Filter.Q.value = Q
+    console.log(`Filter Resonance : ${Q}`);
 }
 
 export function masterVolume(value){
+    value = Math.round(value * 100) / 100;
     MasterVol.gain.setValueAtTime(value, audioContext.currentTime);
+    console.log(`Master Volume : ${Math.round(value*100)}%`);
 }
 
 // async function createReverb() {
@@ -183,7 +192,8 @@ export function masterVolume(value){
 // }
 
 export function drive(amount) {
-    amount = Math.round(amount);
+    console.log(`Drive : ${Math.round(amount*100)}%`);
+    amount = Math.round(amount*500);
     if(amount < 1){
         DistortionOn = false;
     }
@@ -191,11 +201,9 @@ export function drive(amount) {
         Distortion.curve = makeDistortionCurve(amount);
         DistortionOn = true;
     }
-    
 }
 
 function makeDistortionCurve(amount) {
-    
     const k = typeof amount === "number" ? amount : 50;
     const n_samples = 256;
     const curve = new Float32Array(n_samples);

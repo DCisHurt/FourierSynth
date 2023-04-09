@@ -4,37 +4,59 @@
 	<title>An Interactive Introduction to Fourier Transforms</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link href="styles.css" rel="stylesheet" type="text/css">
+	<script src="./js/webaudio-controls.js"></script>
 </head>
 <body>
 <header>
 	<canvas id="header-background" class="header-background"></canvas>
 	<h1>Fourier Synth</h1>
 	<p>DCisHurt</p>
-	
 </header>
+<main id="container">
+<!-- <script>
+	WebAudioControlsOptions={
+		knobDiameter:80,
+		switchWidth:40,
+		switchHeight:20,
+		knobValuetip:1,
+	};
+</script> -->
 
-<main id="content">
-	
 <div class="multi-container">
 <div class="sketch" >
-    <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
+    <canvas id="wave-draw" class="sketch-child" width=500 height=500></canvas>
     <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
 </div>
 <canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
 </div>
-<p>
-	nFFT<input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
-	cutoff<input id="cutoff-slider" type="range" min="24" max="24000" value="6000" step="any">
-	Resonance<input id="resonance-slider" type="range" min="1" max="21" value="10" step="any">
-	Delay Time<input id="delay-time-slider" type="range" min="0" max="1" value="0.5" step="any">
-	Delay Wet<input id="delay-wet-slider" type="range" min="0" max="1" value="0.4" step="any">
-	Attack<input id="attack-slider" type="range" min="0" max="2" value="0.1" step="any">
-	Decay<input id="decay-slider" type="range" min="0" max="2" value="0.5" step="any">
-	Drive<input id="drive-slider" type="range" min="0" max="500" value="0" step="any">
-	Master<input id="master-slider" type="range" min="0" max="1" value="0.5" step="any">
-
-<button id="wave-draw-button" class="button">Play Wave</button></p>
+<div class="wrapper">
+	<div>nFFT<webaudio-knob id="knob-nfft"></webaudio-knob></div>
+	<div>cutoff<webaudio-knob id="knob-cutoff"></webaudio-knob></div>
+	<div>Resonance<webaudio-knob id="knob-resonance"></webaudio-knob></div>
+	<div>Attack<webaudio-knob id="knob-attack"></webaudio-knob></div>
+	<div>Decay<webaudio-knob id="knob-decay"></webaudio-knob></div>
+	<div>Delay Time<webaudio-knob id="knob-delay-time"></webaudio-knob></div>
+	<div>Delay Wet<webaudio-knob id="knob-delay-wet"></webaudio-knob></div>
+	<div>Drive<webaudio-knob id="knob-drive"></webaudio-knob></div>
+	<div>Master<webaudio-knob id="knob-master"></webaudio-knob></div>
+</div>
+<webaudio-keyboard id="keyboard" width="960" height="270" keys="25" min="47" outline="0"></webaudio-keyboard>
 </main>
+
+	<div>One</div>
+	<div>Two</div>
+	<div>Three</div>
+	<div>Four</div>
+	<div>Five</div>
+	<div>Five1</div>
+	<div>Five2</div>
+	<div>Five3</div>
+	<div>Five4</div>
+	<div>Five5</div>
+	<div>Five6</div>
+	<div>Five7</div>
+ </div>
+
 <!-- <script src="build/main.bundle.js" async></script> -->
 <script type="module" src="./js/main.js" async></script>
 <!-- <script src="src/js/midi.js" async></script> -->

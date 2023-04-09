@@ -66,7 +66,7 @@ function midiMessageReceived(event) {
         stopSoundWave(channel);
     } 
     else if (cmd === NOTE_ON) {
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}, velocity: ${velocity}`);
+        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}`);
         playSoundWave(channel,note2Frequency(value));
     }
     else if (cmd === PITCH_BEND) {
@@ -82,40 +82,30 @@ function midiMessageReceived(event) {
 
         switch (value) {
             case 2:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, nFFT:${velocity}`);
                 nPiontsCC.forEach(fn => fn(velocity / 127));
                 break;
             case 3:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter CutOff:${velocity}`);
-                let freq = Math.round(Math.pow(10, (velocity / 127) *3) * 24);
-                cutoffCC.forEach(fn => fn(freq));
+                cutoffCC.forEach(fn => fn(velocity / 127));
                 break;
             case 4:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter Resonance:${velocity}`);
-                resonanceCC.forEach(fn => fn((velocity * 20 / 127) + 1));
+                resonanceCC.forEach(fn => fn(velocity / 127));
                 break;
             case 5:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Time:${velocity}`);
-                delayTimeCC.forEach(fn => fn(velocity / 127));
+                attackCC.forEach(fn => fn(velocity / 127));
                 break;
             case 6:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Wet:${velocity}`);
-                delayWetCC.forEach(fn => fn(velocity / 127));
+                decayCC.forEach(fn => fn(velocity / 127));
                 break;
             case 7:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Attack Time:${velocity}`);
-                attackCC.forEach(fn => fn(velocity * 2 / 127));
+                delayTimeCC.forEach(fn => fn(velocity / 127));
                 break;
             case 8:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Decay Time:${velocity}`);
-                decayCC.forEach(fn => fn(velocity * 2 / 127));
+                delayWetCC.forEach(fn => fn(velocity / 127));
                 break;
             case 9:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Drive:${velocity}`);
-                driveCC.forEach(fn => fn(velocity * 500 / 127));
+                driveCC.forEach(fn => fn(velocity / 127));
                 break;
             case 10:
-                console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Master Volume:${velocity}`);
                 masterVolCC.forEach(fn => fn(velocity / 127));
                 break;
             case 11:
@@ -131,6 +121,6 @@ function midiMessageReceived(event) {
 }
 
 
-function note2Frequency(note) {
+export function note2Frequency(note) {
     return 440 * Math.pow(2,(note-69)/12);
 }
