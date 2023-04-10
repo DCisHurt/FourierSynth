@@ -9,6 +9,9 @@ export let attackCC = [];
 export let decayCC = [];
 export let driveCC = [];
 export let masterVolCC = [];
+export let knobHighlight = [];
+
+var highlight = 0;
 
 export function connectMidi() {
 
@@ -76,7 +79,6 @@ function midiMessageReceived(event) {
         volumeShift(channel, value);
     }
     else if (cmd === CONTROL_CHANGE) {
-
         switch (value) {
             case 2:
                 nPiontsCC.forEach(fn => fn(velocity / 127));
@@ -106,10 +108,12 @@ function midiMessageReceived(event) {
                 masterVolCC.forEach(fn => fn(velocity / 127));
                 break;
             case 11:
-                console.log(`CC + 1`);
+                highlight = velocity;
+                knobHighlight.forEach(fn => fn(highlight));
                 break;
             case 12:
-                console.log(`CC - 1`);
+                highlight = velocity;
+                knobHighlight.forEach(fn => fn(highlight));
                 break;
             default:
                 break;
