@@ -49,7 +49,6 @@ function initDevices(midi) {
 
 function midiMessageReceived(event) {
     // MIDI commands we care about. See
-    // http://webaudio.github.io/web-midi-api/#a-simple-monophonic-sine-wave-midi-synthesizer.
     const NOTE_ON = 9;
     const NOTE_OFF = 8;
     const PITCH_BEND = 0xE;
@@ -71,11 +70,9 @@ function midiMessageReceived(event) {
     }
     else if (cmd === PITCH_BEND) {
         const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
-        // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
         pitchShift(channel, bend);
     }
     else if (cmd === AFTER_TOUCH) {
-        // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, volume:${value}`);
         volumeShift(channel, value);
     }
     else if (cmd === CONTROL_CHANGE) {

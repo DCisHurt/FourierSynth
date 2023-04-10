@@ -27,6 +27,8 @@ A live demo is available [here](https://dcishurt.github.io/FourierSynth/).
 
 1. Draw a waveform on the interactive canvas and adjust the number of FFT points to obtain the base signal to be synthesised.
 
+    ![draw](img/draw.gif)
+
 2. Play with mouse, keyboard or usb midi controller.
 
 3. Keyboard Mapping
