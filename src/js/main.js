@@ -1,26 +1,3 @@
-// import DrawController from './controller/draw-controller.js';
-// import EpicyclesController from './controller/epicycles-controller.js';
-// import ComplexSinusoidController from './controller/complex-sinusoid-controller.js';
-// import { titlePoints } from './points/title-points.js';
-// import WaveController from './controller/wave-controller.js';
-// import SkewedSinusoidController from './controller/skewed-sinusoid-controller.js';
-// import { peaceHandPoints } from './points/peace-hand-points.js';
-// import SkewedPathController from './controller/skewed-path-controller.js';
-// import { mePoints } from './points/me-points.js';
-// import ImageSwapController from './controller/image-swap-controller.js';
-// import { loopLikeAJpeg } from './jpeg.js';
-// import ImageBuildUpController from './controller/image-build-up-controller.js';
-// // import JpegCompressorController from './controller/jpeg-compressor-controller.js';
-// import HeadingController from './controller/heading-controller.js';
-// import WaveFrequenciesController from './controller/wave-frequencies-controller.js';
-// import SelfDrawController from './controller/self-draw/self-draw-controller.js';
-// import ImageMultController from './controller/image-mult-controller.js';
-// import { getScrollPosition } from './controller/controller-util.js';
-// import WaveSamplesController from './controller/wave-samples-controller.js';
-// import { getWave, squareWave } from './wave-things.js';
-
-
-
 import Conductor from './conductor.js';
 import WaveSplitController from './controller/wave-split-controller.js';
 import WaveDrawController from './controller/wave-draw-controller.js';
@@ -53,17 +30,19 @@ function init() {
             waveDrawController.onDrawingStart.push(() => {
                 waveDrawSplitController.splitAnim = true;
                 waveDrawSplitController.setPath([]);
+                waveDrawSplitController.fourierAmt = 1;
                 updateBuffer(waveDrawSplitController.partialWave);
             });
             waveDrawController.onDrawingEnd.push(() => {
                 waveDrawSplitController.splitAnim = true;
                 waveDrawSplitController.setPath(waveDrawController.normPath);
+                waveDrawSplitController.fourierAmt = 1;
                 updateBuffer(waveDrawSplitController.partialWave);
             });
             // Reset the nfft back to 1 when the wave changes to draw the full wave.
             if (hasElement('knob-nfft')) {
                 let knob = document.getElementById("knob-nfft")
-                knob.valuetip = 1
+                
                 knob.min = 0
                 knob.max = 1.0
                 knob.value = 1
@@ -85,12 +64,10 @@ function init() {
                 });
                 waveDrawController.onDrawingStart.push(() => {
                     knob.value = 1;
-                    waveDrawSplitController.fourierAmt = 1;
                     console.log(`nFFT:128`);
                 });
                 waveDrawController.onDrawingEnd.push(() => {
                     knob.value = 1;
-                    waveDrawSplitController.fourierAmt = 1;
                     console.log(`nFFT:128`);
                 });
             }
@@ -100,7 +77,7 @@ function init() {
 
     if (hasElement('knob-cutoff')) {
         let knob = document.getElementById("knob-cutoff")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 1
@@ -118,7 +95,7 @@ function init() {
 
     if (hasElement('knob-resonance')) {
         let knob = document.getElementById("knob-resonance")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 1
@@ -136,7 +113,7 @@ function init() {
 
     if (hasElement('knob-attack')) {
         let knob = document.getElementById("knob-attack")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0.05
@@ -154,7 +131,7 @@ function init() {
 
     if (hasElement('knob-decay')) {
         let knob = document.getElementById("knob-decay")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0.25
@@ -172,7 +149,7 @@ function init() {
 
     if (hasElement('knob-delay-time')) {
         let knob = document.getElementById("knob-delay-time")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0.3
@@ -190,7 +167,7 @@ function init() {
 
     if (hasElement('knob-delay-wet')) {
         let knob = document.getElementById("knob-delay-wet")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0.3
@@ -208,7 +185,7 @@ function init() {
 
     if (hasElement('knob-drive')) {
         let knob = document.getElementById("knob-drive")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0
@@ -226,7 +203,7 @@ function init() {
 
     if (hasElement('knob-master')) {
         let knob = document.getElementById("knob-master")
-        knob.valuetip = 1
+        
         knob.min = 0
         knob.max = 1.0
         knob.value = 0.75
@@ -244,6 +221,9 @@ function init() {
 
     if (hasElement('keyboard')) {
         let kb = document.getElementById("keyboard")
+        kb.width = Math.round(window.innerWidth * 0.75)
+        kb.height = Math.round(window.innerHeight * 0.4)
+        console.log(window.innerWidth)
         kb.addEventListener("change",(event)=>{
             let state = event.note[0]
             let note = event.note[1]
@@ -269,23 +249,4 @@ function hasElement(id) {
     return document.getElementById(id) != null;
 }
 
-// /**
-//  * Configure the canvases to be able to handle screens with higher dpi.
-//  *
-//  * We can only call this once because after that, the width has changed!
-//  */
-// function updateCanvasSizes() {
-//     const pixelRatio = window.devicePixelRatio || 1;
-//     const canvases = document.getElementsByTagName("canvas");
-//     for (let canvas of canvases) {
-//         const width = canvas.width;
-//         const height = canvas.height;
-//         canvas.width = width * pixelRatio;
-//         canvas.height = height * pixelRatio;
-//         canvas.style.width = width + 'px';
-//         canvas.style.height = height + 'px';
-//     }
-// }
-
-// updateCanvasSizes();
 init();

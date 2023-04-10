@@ -1,42 +1,53 @@
 <!DOCTYPE html>
 <html >
 <head>
-	<title>An Interactive Introduction to Fourier Transforms</title>
+	<title>Fourier Synth</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link href="styles.css" rel="stylesheet" type="text/css">
+	<script>
+		WebAudioControlsOptions={
+			knobDiameter: 64,
+			valuetip: 1,
+			knobSrc:"https://g200kg.github.io/webaudio-controls/knobs/Carbon.png",
+		};
+	</script>
+	<script src="https://g200kg.github.io/webaudio-controls/webaudio-controls.js"></script>
 </head>
 <body>
 <header>
 	<canvas id="header-background" class="header-background"></canvas>
 	<h1>Fourier Synth</h1>
-	<p>DCisHurt</p>
-	
 </header>
+<main class="container">
 
-<main id="content">
-	
-<div class="multi-container">
-<div class="sketch" >
-    <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
-    <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
+<div class="section">SIGNAL</div>
+<div class="section">FFT</div>
+<div class="section">FILTER</div>
+<div class="section">EG</div>
+<div class="section">DELAY</div>
+<div class="multi-container signal">
+	<div class="sketch" >
+		<canvas id="wave-draw" class="sketch-child" width=500 height=500></canvas>
+		<p id="wave-draw-instruction" class="instruction">Draw here!</p>
+	</div>
+	<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
 </div>
-<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
-</div>
-<p>
-	nFFT<input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
-	cutoff<input id="cutoff-slider" type="range" min="24" max="24000" value="6000" step="any">
-	Resonance<input id="resonance-slider" type="range" min="1" max="21" value="10" step="any">
-	Delay Time<input id="delay-time-slider" type="range" min="0" max="1" value="0.5" step="any">
-	Delay Wet<input id="delay-wet-slider" type="range" min="0" max="1" value="0.4" step="any">
-	Attack<input id="attack-slider" type="range" min="0" max="2" value="0.1" step="any">
-	Decay<input id="decay-slider" type="range" min="0" max="2" value="0.5" step="any">
-	Drive<input id="drive-slider" type="range" min="0" max="500" value="0" step="any">
-	Master<input id="master-slider" type="range" min="0" max="1" value="0.5" step="any">
 
-<button id="wave-draw-button" class="button">Play Wave</button></p>
+
+<div class="nfft knob"><webaudio-knob class="knob-child" id="knob-nfft"></webaudio-knob><p class="knob-text">POINT</p></div>
+<div class="cutoff knob"><webaudio-knob class="knob-child" id="knob-cutoff"></webaudio-knob><p class="knob-text">CUTOFF</p></div>
+<div class="resonance knob"><webaudio-knob class="knob-child" id="knob-resonance"></webaudio-knob><p class="knob-text">RESONANCE</p></div>
+<div class="attack knob"><webaudio-knob class="knob-child" id="knob-attack"></webaudio-knob><p class="knob-text">ATTACK</p></div>
+<div class="decay knob"><webaudio-knob class="knob-child" id="knob-decay"></webaudio-knob><p class="knob-text">DECAY</p></div>
+<div class="time knob"><webaudio-knob class="knob-child" id="knob-delay-time"></webaudio-knob><p class="knob-text">TIME</p></div>
+<div class="wet knob"><webaudio-knob class="knob-child" id="knob-delay-wet"></webaudio-knob><p class="knob-text">DRY/WET</p></div>
+<div class="drive knob"><webaudio-knob class="knob-child" id="knob-drive"></webaudio-knob><p class="knob-text">DRIVE</p></div>
+<div class="master knob"><webaudio-knob class="knob-child" id="knob-master"></webaudio-knob><p class="knob-text">MASTER</p></div>
+
+<webaudio-keyboard class="keyboard" id="keyboard" width="1300" height="450" keys="25" min="48" outline="0"></webaudio-keyboard>
 </main>
+<div align="center"><a href="https://github.com/DCisHurt/FourierSynth">Github Repository</a></div>
+
 <script src="build/main.bundle.js" async></script>
-<!-- <script type="module" src="src/js/main.js" async></script> -->
-<!-- <script src="src/js/midi.js" async></script> -->
 </body>
 </html>

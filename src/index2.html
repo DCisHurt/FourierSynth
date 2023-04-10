@@ -1,62 +1,52 @@
 <!DOCTYPE html>
 <html >
 <head>
-	<title>An Interactive Introduction to Fourier Transforms</title>
+	<title>Fourier Synth</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<link href="styles.css" rel="stylesheet" type="text/css">
-	<script src="./js/webaudio-controls.js"></script>
+	<script>
+		WebAudioControlsOptions={
+			knobDiameter: 64,
+			valuetip: 1,
+			knobSrc:"https://g200kg.github.io/webaudio-controls/knobs/Carbon.png",
+		};
+	</script>
+	<script src="https://g200kg.github.io/webaudio-controls/webaudio-controls.js"></script>
 </head>
 <body>
 <header>
 	<canvas id="header-background" class="header-background"></canvas>
 	<h1>Fourier Synth</h1>
-	<p>DCisHurt</p>
 </header>
-<main id="container">
-<!-- <script>
-	WebAudioControlsOptions={
-		knobDiameter:80,
-		switchWidth:40,
-		switchHeight:20,
-		knobValuetip:1,
-	};
-</script> -->
+<main class="container">
 
-<div class="multi-container">
-<div class="sketch" >
-    <canvas id="wave-draw" class="sketch-child" width=500 height=500></canvas>
-    <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
+<div class="section">SIGNAL</div>
+<div class="section">FFT</div>
+<div class="section">FILTER</div>
+<div class="section">EG</div>
+<div class="section">DELAY</div>
+<div class="multi-container signal">
+	<div class="sketch" >
+		<canvas id="wave-draw" class="sketch-child" width=500 height=500></canvas>
+		<p id="wave-draw-instruction" class="instruction">Draw here!</p>
+	</div>
+	<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
 </div>
-<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
-</div>
-<div class="wrapper">
-	<div>nFFT<webaudio-knob id="knob-nfft"></webaudio-knob></div>
-	<div>cutoff<webaudio-knob id="knob-cutoff"></webaudio-knob></div>
-	<div>Resonance<webaudio-knob id="knob-resonance"></webaudio-knob></div>
-	<div>Attack<webaudio-knob id="knob-attack"></webaudio-knob></div>
-	<div>Decay<webaudio-knob id="knob-decay"></webaudio-knob></div>
-	<div>Delay Time<webaudio-knob id="knob-delay-time"></webaudio-knob></div>
-	<div>Delay Wet<webaudio-knob id="knob-delay-wet"></webaudio-knob></div>
-	<div>Drive<webaudio-knob id="knob-drive"></webaudio-knob></div>
-	<div>Master<webaudio-knob id="knob-master"></webaudio-knob></div>
-</div>
-<webaudio-keyboard id="keyboard" width="960" height="270" keys="25" min="47" outline="0"></webaudio-keyboard>
+
+
+<div class="nfft knob"><webaudio-knob class="knob-child" id="knob-nfft"></webaudio-knob><p class="knob-text">POINT</p></div>
+<div class="cutoff knob"><webaudio-knob class="knob-child" id="knob-cutoff"></webaudio-knob><p class="knob-text">CUTOFF</p></div>
+<div class="resonance knob"><webaudio-knob class="knob-child" id="knob-resonance"></webaudio-knob><p class="knob-text">RESONANCE</p></div>
+<div class="attack knob"><webaudio-knob class="knob-child" id="knob-attack"></webaudio-knob><p class="knob-text">ATTACK</p></div>
+<div class="decay knob"><webaudio-knob class="knob-child" id="knob-decay"></webaudio-knob><p class="knob-text">DECAY</p></div>
+<div class="time knob"><webaudio-knob class="knob-child" id="knob-delay-time"></webaudio-knob><p class="knob-text">TIME</p></div>
+<div class="wet knob"><webaudio-knob class="knob-child" id="knob-delay-wet"></webaudio-knob><p class="knob-text">DRY/WET</p></div>
+<div class="drive knob"><webaudio-knob class="knob-child" id="knob-drive"></webaudio-knob><p class="knob-text">DRIVE</p></div>
+<div class="master knob"><webaudio-knob class="knob-child" id="knob-master"></webaudio-knob><p class="knob-text">MASTER</p></div>
+
+<webaudio-keyboard class="keyboard" id="keyboard" width="1300" height="450" keys="25" min="48" outline="0"></webaudio-keyboard>
 </main>
-
-	<div>One</div>
-	<div>Two</div>
-	<div>Three</div>
-	<div>Four</div>
-	<div>Five</div>
-	<div>Five1</div>
-	<div>Five2</div>
-	<div>Five3</div>
-	<div>Five4</div>
-	<div>Five5</div>
-	<div>Five6</div>
-	<div>Five7</div>
- </div>
-
+<div align="center"><a href="https://github.com/DCisHurt/FourierSynth">Github Repository</a></div>
 <!-- <script src="build/main.bundle.js" async></script> -->
 <script type="module" src="./js/main.js" async></script>
 <!-- <script src="src/js/midi.js" async></script> -->

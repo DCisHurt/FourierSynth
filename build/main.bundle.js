@@ -228,92 +228,6 @@ class Controller {
 
 /***/ }),
 
-/***/ "./src/js/controller/range-controller.js":
-/*!***********************************************!*\
-  !*** ./src/js/controller/range-controller.js ***!
-  \***********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ RangeController)
-/* harmony export */ });
-/* harmony import */ var _util_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../util.js */ "./src/js/util.js");
-/* harmony import */ var _controller_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./controller.js */ "./src/js/controller/controller.js");
-
-
-class RangeController extends _controller_js__WEBPACK_IMPORTED_MODULE_1__["default"] {
-  constructor(id) {
-    super();
-    this.id = id;
-    this.slider = document.getElementById(id);
-    this.onValueChange = [];
-    this.holdValueCount = 0;
-    /**
-     * How long to pause on the value the person set before continuing
-     */
-
-    this.holdValueLength = 10;
-    this.heldValue = 0;
-    this.resumeCount = 0;
-    /**
-     * Time to transition back to being controller automatically
-     */
-
-    this.resumeLength = 2;
-    this.animate = true;
-    this.animAmt = 0;
-    this.period = 10;
-
-    this.slider.oninput = () => this.holdValue();
-  }
-
-  update(dt, mousePosition) {
-    if (!this.animate) {
-      return;
-    }
-
-    if (this.holdValueCount > 0) {
-      this.holdValueCount -= dt; // Just set it back to zero to be clean about it.
-
-      if (this.holdValueCount <= 0) {
-        this.holdValueCount = 0;
-      } // we're going to return here so we don't mangle the value of the slider
-
-
-      return;
-    } else if (this.resumeCount > 0) {
-      this.resumeCount -= dt;
-
-      if (this.resumeCount <= 0) {
-        this.resumeCount = 0;
-      }
-    } // Goes from 0 to 1 as stuff resumes.
-
-
-    const resumeAmt = 1 - this.resumeCount / this.resumeLength;
-    const easedResumeAmt = (0,_util_js__WEBPACK_IMPORTED_MODULE_0__.easeInOut)(resumeAmt, 3); // Multiply by the resume amt to slow it down
-
-    this.animAmt += easedResumeAmt * dt / this.period;
-    this.animAmt %= 1;
-    const sinePos = 0.5 * Math.cos(2 * Math.PI * this.animAmt) + 0.5;
-    this.slider.value = sinePos;
-    this.onValueChange.forEach(fn => fn(this.slider.value));
-  }
-
-  holdValue() {
-    this.holdValueCount = this.holdValueLength;
-    this.resumeCount = this.resumeLength;
-    this.heldValue = this.slider.value; // Calculate what the anim amt should be.
-
-    this.animAmt = Math.acos(2 * this.heldValue - 1) / (2 * Math.PI);
-    this.onValueChange.forEach(fn => fn(this.slider.value));
-  }
-
-}
-
-/***/ }),
-
 /***/ "./src/js/controller/wave-draw-controller.js":
 /*!***************************************************!*\
   !*** ./src/js/controller/wave-draw-controller.js ***!
@@ -1265,6 +1179,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "driveCC": () => (/* binding */ driveCC),
 /* harmony export */   "masterVolCC": () => (/* binding */ masterVolCC),
 /* harmony export */   "nPiontsCC": () => (/* binding */ nPiontsCC),
+/* harmony export */   "note2Frequency": () => (/* binding */ note2Frequency),
 /* harmony export */   "resonanceCC": () => (/* binding */ resonanceCC)
 /* harmony export */ });
 /* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
@@ -1328,7 +1243,7 @@ function midiMessageReceived(event) {
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note off: pitch:${value}`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.stopSoundWave)(channel);
   } else if (cmd === NOTE_ON) {
-    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}, velocity: ${velocity}`);
+    console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}`);
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(value));
   } else if (cmd === PITCH_BEND) {
     const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192; // console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, pitch shift ${(bend * 12).toFixed(1)} semitones`);
@@ -1340,48 +1255,38 @@ function midiMessageReceived(event) {
   } else if (cmd === CONTROL_CHANGE) {
     switch (value) {
       case 2:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, nFFT:${velocity}`);
         nPiontsCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 3:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter CutOff:${velocity}`);
-        let freq = Math.round(Math.pow(10, velocity / 127 * 3) * 24);
-        cutoffCC.forEach(fn => fn(freq));
+        cutoffCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 4:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Filter Resonance:${velocity}`);
-        resonanceCC.forEach(fn => fn(velocity * 20 / 127 + 1));
+        resonanceCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 5:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Time:${velocity}`);
-        delayTimeCC.forEach(fn => fn(velocity / 127));
+        attackCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 6:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Delay Wet:${velocity}`);
-        delayWetCC.forEach(fn => fn(velocity / 127));
+        decayCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 7:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Attack Time:${velocity}`);
-        attackCC.forEach(fn => fn(velocity * 2 / 127));
+        delayTimeCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 8:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Decay Time:${velocity}`);
-        decayCC.forEach(fn => fn(velocity * 2 / 127));
+        delayWetCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 9:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Drive:${velocity}`);
-        driveCC.forEach(fn => fn(velocity * 500 / 127));
+        driveCC.forEach(fn => fn(velocity / 127));
         break;
 
       case 10:
-        console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, Master Volume:${velocity}`);
         masterVolCC.forEach(fn => fn(velocity / 127));
         break;
 
@@ -1452,18 +1357,18 @@ function initAudioContext() {
 
   Filter = audioContext.createBiquadFilter();
   Filter.type = "lowpass";
-  filterCutoff(12000);
+  filterCutoff(1);
   filterResonance(1);
   Delay = audioContext.createDelay(5.0);
   DelayFeedback = audioContext.createGain();
   DelayGain = audioContext.createGain();
   delayTime(0.3);
-  delayFeedback(0.5);
-  delayWet(0.5);
+  delayFeedback(0.8);
+  delayWet(0.3);
   Distortion = audioContext.createWaveShaper();
   drive(0);
   MasterVol = audioContext.createGain();
-  masterVolume(0.5);
+  masterVolume(0.75);
   Distortion.connect(Filter);
   Filter.connect(Delay);
   Delay.connect(DelayGain);
@@ -1497,8 +1402,6 @@ function updateBuffer(wave) {
         osc[i].setPeriodicWave(wave2);
       }
     }
-
-    console.log("update");
   }
 }
 function playSoundWave(ch, pitch) {
@@ -1529,12 +1432,14 @@ function stopSoundWave(ch) {
   }
 }
 function attackTimeSet(value) {
-  value = Math.round(value * 100) / 100;
+  value = Math.round(value * 200) / 100;
   attackTime = value;
+  console.log(`Attack Time : ${attackTime}s`);
 }
 function decayTimeSet(value) {
-  value = Math.round(value * 100) / 100;
+  value = Math.round(value * 200) / 100;
   decayTime = value;
+  console.log(`Decay Time : ${decayTime}s`);
 }
 function pitchShift(ch, pitch) {
   if (osc[ch] != null) {
@@ -1548,7 +1453,8 @@ function volumeShift(ch, vol) {
   }
 }
 function delayTime(time) {
-  Delay.delayTime.setValueAtTime(time, audioContext.currentTime);
+  Delay.delayTime.setValueAtTime(time * 2, audioContext.currentTime);
+  console.log(`Delay Time : ${Math.round(time * 200) / 100}s`);
 }
 
 function delayFeedback(value) {
@@ -1557,15 +1463,22 @@ function delayFeedback(value) {
 
 function delayWet(value) {
   DelayGain.gain.setValueAtTime(value, audioContext.currentTime);
+  console.log(`Delay Wet : ${Math.round(value * 100)}%`);
 }
 function filterCutoff(value) {
-  Filter.frequency.value = value;
+  let freq = Math.round(Math.pow(10, value * 2) * 240);
+  Filter.frequency.value = freq;
+  console.log(`Filter Cut Off : ${freq}Hz`);
 }
 function filterResonance(value) {
-  Filter.Q.value = value;
+  let Q = Math.round((value * 20 + 1) * 100) / 100;
+  Filter.Q.value = Q;
+  console.log(`Filter Resonance : ${Q}`);
 }
 function masterVolume(value) {
+  value = Math.round(value * 100) / 100;
   MasterVol.gain.setValueAtTime(value, audioContext.currentTime);
+  console.log(`Master Volume : ${Math.round(value * 100)}%`);
 } // async function createReverb() {
 //     let convolver = audioContext.createConvolver();
 //     // load impulse response from file
@@ -1576,7 +1489,8 @@ function masterVolume(value) {
 // }
 
 function drive(amount) {
-  amount = Math.round(amount);
+  console.log(`Drive : ${Math.round(amount * 100)}%`);
+  amount = Math.round(amount * 500);
 
   if (amount < 1) {
     DistortionOn = false;
@@ -1893,30 +1807,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _conductor_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./conductor.js */ "./src/js/conductor.js");
 /* harmony import */ var _controller_wave_split_controller_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./controller/wave-split-controller.js */ "./src/js/controller/wave-split-controller.js");
 /* harmony import */ var _controller_wave_draw_controller_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./controller/wave-draw-controller.js */ "./src/js/controller/wave-draw-controller.js");
-/* harmony import */ var _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./controller/range-controller.js */ "./src/js/controller/range-controller.js");
-/* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
-/* harmony import */ var _midi_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./midi.js */ "./src/js/midi.js");
-// import DrawController from './controller/draw-controller.js';
-// import EpicyclesController from './controller/epicycles-controller.js';
-// import ComplexSinusoidController from './controller/complex-sinusoid-controller.js';
-// import { titlePoints } from './points/title-points.js';
-// import WaveController from './controller/wave-controller.js';
-// import SkewedSinusoidController from './controller/skewed-sinusoid-controller.js';
-// import { peaceHandPoints } from './points/peace-hand-points.js';
-// import SkewedPathController from './controller/skewed-path-controller.js';
-// import { mePoints } from './points/me-points.js';
-// import ImageSwapController from './controller/image-swap-controller.js';
-// import { loopLikeAJpeg } from './jpeg.js';
-// import ImageBuildUpController from './controller/image-build-up-controller.js';
-// // import JpegCompressorController from './controller/jpeg-compressor-controller.js';
-// import HeadingController from './controller/heading-controller.js';
-// import WaveFrequenciesController from './controller/wave-frequencies-controller.js';
-// import SelfDrawController from './controller/self-draw/self-draw-controller.js';
-// import ImageMultController from './controller/image-mult-controller.js';
-// import { getScrollPosition } from './controller/controller-util.js';
-// import WaveSamplesController from './controller/wave-samples-controller.js';
-// import { getWave, squareWave } from './wave-things.js';
-
+/* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
+/* harmony import */ var _midi_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./midi.js */ "./src/js/midi.js");
 
 
 
@@ -1926,7 +1818,7 @@ let conductor = null;
 
 function init() {
   let controllers = [];
-  let waveDrawController, waveDrawSliderController, waveDrawButton, waveDrawSplitController;
+  let waveDrawController, waveDrawSplitController;
 
   if (hasElement('wave-draw')) {
     waveDrawController = new _controller_wave_draw_controller_js__WEBPACK_IMPORTED_MODULE_2__["default"]('wave-draw');
@@ -1941,12 +1833,6 @@ function init() {
     }
   }
 
-  if (hasElement('wave-draw-slider')) {
-    waveDrawSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('wave-draw-slider');
-    waveDrawSliderController.animate = false;
-    controllers.push(waveDrawSliderController);
-  }
-
   if (hasElement('wave-draw-split')) {
     waveDrawSplitController = new _controller_wave_split_controller_js__WEBPACK_IMPORTED_MODULE_1__["default"]('wave-draw-split');
 
@@ -1954,159 +1840,206 @@ function init() {
       waveDrawController.onDrawingStart.push(() => {
         waveDrawSplitController.splitAnim = true;
         waveDrawSplitController.setPath([]);
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
+        waveDrawSplitController.fourierAmt = 1;
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.updateBuffer)(waveDrawSplitController.partialWave);
       });
       waveDrawController.onDrawingEnd.push(() => {
         waveDrawSplitController.splitAnim = true;
         waveDrawSplitController.setPath(waveDrawController.normPath);
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
-      }); // Reset the slider back to 1 when the wave changes to draw the full wave.
+        waveDrawSplitController.fourierAmt = 1;
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.updateBuffer)(waveDrawSplitController.partialWave);
+      }); // Reset the nfft back to 1 when the wave changes to draw the full wave.
 
-      if (waveDrawSliderController) {
+      if (hasElement('knob-nfft')) {
+        let knob = document.getElementById("knob-nfft");
+        knob.min = 0;
+        knob.max = 1.0;
+        knob.value = 1;
+        knob.step = 0.01;
+        knob.tooltip = "FFT points";
+        knob.conv = "(x*128).toFixed(0)";
+        knob.addEventListener("input", event => {
+          waveDrawSplitController.fourierAmt = event.target.value;
+          waveDrawSplitController.splitAnim = false;
+          (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.updateBuffer)(waveDrawSplitController.partialWave);
+          console.log(`nFFT:${Math.round(event.target.value * 128)}`);
+        });
+        _midi_js__WEBPACK_IMPORTED_MODULE_4__.nPiontsCC.push(val => {
+          knob.value = val;
+          waveDrawSplitController.fourierAmt = val;
+          waveDrawSplitController.splitAnim = false;
+          (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.updateBuffer)(waveDrawSplitController.partialWave);
+          console.log(`nFFT:${Math.round(val * 128)}`);
+        });
         waveDrawController.onDrawingStart.push(() => {
-          waveDrawSliderController.slider.value = 1;
-          waveDrawSplitController.fourierAmt = 1;
+          knob.value = 1;
+          console.log(`nFFT:128`);
         });
         waveDrawController.onDrawingEnd.push(() => {
-          waveDrawSliderController.slider.value = 1;
-          waveDrawSplitController.fourierAmt = 1;
+          knob.value = 1;
+          console.log(`nFFT:128`);
         });
       }
-    }
-
-    if (waveDrawSliderController != null) {
-      _midi_js__WEBPACK_IMPORTED_MODULE_5__.nPiontsCC.push(val => {
-        waveDrawSplitController.fourierAmt = val;
-        waveDrawSplitController.splitAnim = false;
-        waveDrawSliderController.slider.value = val;
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
-      });
-      waveDrawSliderController.onValueChange.push(val => {
-        waveDrawSplitController.fourierAmt = val;
-        waveDrawSplitController.splitAnim = false;
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.updateBuffer)(waveDrawSplitController.partialWave);
-      });
     }
 
     controllers.push(waveDrawSplitController);
   }
 
-  if (hasElement('wave-draw-button')) {
-    const button = document.getElementById('wave-draw-button');
-
-    if (button) {
-      button.addEventListener('mousedown', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.playSoundWave)(0, 260));
-      button.addEventListener('mouseout', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
-      button.addEventListener('mouseup', () => (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.stopSoundWave)(0));
-    }
+  if (hasElement('knob-cutoff')) {
+    let knob = document.getElementById("knob-cutoff");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 1;
+    knob.step = 0.01;
+    knob.tooltip = "Cutoff";
+    knob.conv = "(Math.pow(10, x * 2) * 240).toFixed(0) + ' Hz'";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.filterCutoff)(event.target.value);
+    });
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.cutoffCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.filterCutoff)(val);
+    });
   }
 
-  if (hasElement('cutoff-slider')) {
-    let cutoffSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('cutoff-slider');
-    cutoffSliderController.animate = false;
-    cutoffSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterCutoff)(val);
+  if (hasElement('knob-resonance')) {
+    let knob = document.getElementById("knob-resonance");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 1;
+    knob.step = 0.01;
+    knob.tooltip = "Resonance";
+    knob.conv = "((x * 20) + 1.0).toFixed(1)";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.filterResonance)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.cutoffCC.push(val => {
-      cutoffSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterCutoff)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.resonanceCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.filterResonance)(val);
     });
-    controllers.push(cutoffSliderController);
   }
 
-  if (hasElement('resonance-slider')) {
-    let resonanceSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('resonance-slider');
-    resonanceSliderController.animate = false;
-    resonanceSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterResonance)(val);
+  if (hasElement('knob-attack')) {
+    let knob = document.getElementById("knob-attack");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0.05;
+    knob.step = 0.01;
+    knob.tooltip = "Attack";
+    knob.conv = "(x*2).toFixed(2)+ 's'";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.attackTimeSet)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.resonanceCC.push(val => {
-      resonanceSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.filterResonance)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.attackCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.attackTimeSet)(val);
     });
-    controllers.push(resonanceSliderController);
   }
 
-  if (hasElement('delay-time-slider')) {
-    let delayTimeSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('delay-time-slider');
-    delayTimeSliderController.animate = false;
-    delayTimeSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayTime)(val);
+  if (hasElement('knob-decay')) {
+    let knob = document.getElementById("knob-decay");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0.25;
+    knob.step = 0.01;
+    knob.tooltip = "Decay";
+    knob.conv = "(x*2).toFixed(2)+ 's'";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.decayTimeSet)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.delayTimeCC.push(val => {
-      delayTimeSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayTime)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.decayCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.decayTimeSet)(val);
     });
-    controllers.push(delayTimeSliderController);
   }
 
-  if (hasElement('delay-wet-slider')) {
-    let delayWetSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('delay-wet-slider');
-    delayWetSliderController.animate = false;
-    delayWetSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayWet)(val);
+  if (hasElement('knob-delay-time')) {
+    let knob = document.getElementById("knob-delay-time");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0.3;
+    knob.step = 0.01;
+    knob.tooltip = "Delay Time";
+    knob.conv = "(x*2).toFixed(2)+ 's'";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.delayTime)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.delayWetCC.push(val => {
-      delayWetSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.delayWet)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.delayTimeCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.delayTime)(val);
     });
-    controllers.push(delayWetSliderController);
   }
 
-  if (hasElement('attack-slider')) {
-    let attackSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('attack-slider');
-    attackSliderController.animate = false;
-    attackSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.attackTimeSet)(val);
+  if (hasElement('knob-delay-wet')) {
+    let knob = document.getElementById("knob-delay-wet");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0.3;
+    knob.step = 0.01;
+    knob.tooltip = "Delay Wet";
+    knob.conv = "(x*100).toFixed(0) + '%'";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.delayWet)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.attackCC.push(val => {
-      attackSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.attackTimeSet)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.delayWetCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.delayWet)(val);
     });
-    controllers.push(attackSliderController);
   }
 
-  if (hasElement('decay-slider')) {
-    let decaySliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('decay-slider');
-    decaySliderController.animate = false;
-    decaySliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.decayTimeSet)(val);
+  if (hasElement('knob-drive')) {
+    let knob = document.getElementById("knob-drive");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0;
+    knob.step = 0.01;
+    knob.tooltip = "Drive";
+    knob.conv = "(x*10).toFixed(1)";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.drive)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.decayCC.push(val => {
-      decaySliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.decayTimeSet)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.driveCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.drive)(val);
     });
-    controllers.push(decaySliderController);
   }
 
-  if (hasElement('drive-slider')) {
-    let driveSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('drive-slider');
-    driveSliderController.animate = false;
-    driveSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.drive)(val);
+  if (hasElement('knob-master')) {
+    let knob = document.getElementById("knob-master");
+    knob.min = 0;
+    knob.max = 1.0;
+    knob.value = 0.75;
+    knob.step = 0.01;
+    knob.tooltip = "Master Vol";
+    knob.conv = "(x*10).toFixed(1)";
+    knob.addEventListener("input", event => {
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.masterVolume)(event.target.value);
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.driveCC.push(val => {
-      driveSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.drive)(val);
+    _midi_js__WEBPACK_IMPORTED_MODULE_4__.masterVolCC.push(val => {
+      knob.value = val;
+      (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.masterVolume)(val);
     });
-    controllers.push(driveSliderController);
   }
 
-  if (hasElement('master-slider')) {
-    let masterSliderController = new _controller_range_controller_js__WEBPACK_IMPORTED_MODULE_3__["default"]('master-slider');
-    masterSliderController.animate = false;
-    masterSliderController.onValueChange.push(val => {
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.masterVolume)(val);
+  if (hasElement('keyboard')) {
+    let kb = document.getElementById("keyboard");
+    kb.width = Math.round(window.innerWidth * 0.75);
+    kb.height = Math.round(window.innerHeight * 0.4);
+    console.log(window.innerWidth);
+    kb.addEventListener("change", event => {
+      let state = event.note[0];
+      let note = event.note[1];
+
+      if (state) {
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.playSoundWave)(note, (0,_midi_js__WEBPACK_IMPORTED_MODULE_4__.note2Frequency)(note));
+      } else {
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.stopSoundWave)(note);
+      }
     });
-    _midi_js__WEBPACK_IMPORTED_MODULE_5__.masterVolCC.push(val => {
-      masterSliderController.slider.value = val;
-      (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.masterVolume)(val);
-    });
-    controllers.push(masterSliderController);
   }
 
-  (0,_synth_js__WEBPACK_IMPORTED_MODULE_4__.initAudioContext)();
-  (0,_midi_js__WEBPACK_IMPORTED_MODULE_5__.connectMidi)();
+  (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.initAudioContext)();
+  (0,_midi_js__WEBPACK_IMPORTED_MODULE_4__.connectMidi)();
   conductor = new _conductor_js__WEBPACK_IMPORTED_MODULE_0__["default"](controllers);
   conductor.start(); // To let me play around with things in the console.
 
@@ -2115,25 +2048,7 @@ function init() {
 
 function hasElement(id) {
   return document.getElementById(id) != null;
-} // /**
-//  * Configure the canvases to be able to handle screens with higher dpi.
-//  *
-//  * We can only call this once because after that, the width has changed!
-//  */
-// function updateCanvasSizes() {
-//     const pixelRatio = window.devicePixelRatio || 1;
-//     const canvases = document.getElementsByTagName("canvas");
-//     for (let canvas of canvases) {
-//         const width = canvas.width;
-//         const height = canvas.height;
-//         canvas.width = width * pixelRatio;
-//         canvas.height = height * pixelRatio;
-//         canvas.style.width = width + 'px';
-//         canvas.style.height = height + 'px';
-//     }
-// }
-// updateCanvasSizes();
-
+}
 
 init();
 })();
