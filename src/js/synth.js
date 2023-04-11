@@ -18,11 +18,21 @@ let DistortionOn = false;
 
 let attackTime = 0.1;
 let decayTime = 0.5;
+var rafID = null;
+var meter = null;
+var canvasContext = null;
+let canvasW;
+let canvasH;
 
 export function initAudioContext() {
     if (audioContext === null) {   
         audioContext = new AudioContext();
     }
+    let canvas = document.getElementById("meter")
+    canvasW = canvas.width;
+    canvasH = canvas.height;
+
+    canvasContext = canvas.getContext("2d");
 
     Filter = audioContext.createBiquadFilter();
     Filter.type = "lowpass";
@@ -51,6 +61,11 @@ export function initAudioContext() {
     Filter.connect(MasterVol);
     
     MasterVol.connect(audioContext.destination);
+
+    meter = createAudioMeter(audioContext);
+    MasterVol.connect(meter);
+
+    onLevelChange();
 }
 
 export function updateBuffer(wave) {
@@ -86,30 +101,29 @@ export function updateBuffer(wave) {
 
 
 export function playSoundWave(ch, pitch) {
+    if(osc[ch] == null){
+        osc[ch] = audioContext.createOscillator();
+        gain[ch] = audioContext.createGain();
 
-    osc[ch] = audioContext.createOscillator();
-    gain[ch] = audioContext.createGain();
+        osc[ch].setPeriodicWave(wave2);
 
-    osc[ch].setPeriodicWave(wave2);
-    
+        osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+        
+        gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
+        gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
+        gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
 
-    osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
-    
-    gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
-    gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
-    gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
+        osc[ch].connect(gain[ch]);
 
-    osc[ch].connect(gain[ch]);
-
-    if(DistortionOn){
-        gain[ch].connect(Distortion);
+        if(DistortionOn){
+            gain[ch].connect(Distortion);
+        }
+        else{
+            gain[ch].connect(Filter);
+        }
+        
+        osc[ch].start();
     }
-    else{
-        gain[ch].connect(Filter);
-    }
-    
-    osc[ch].start();
-
 }
 
 
@@ -214,4 +228,113 @@ function makeDistortionCurve(amount) {
       curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
     }
     return curve;
+}
+
+
+function createAudioMeter(audioContext,clipLevel,averaging,clipLag) {
+	var processor = audioContext.createScriptProcessor(512);
+	processor.onaudioprocess = volumeAudioProcess;
+	processor.clipping = false;
+	processor.lastClip = 0;
+	processor.volume = 0;
+	processor.clipLevel = clipLevel || 0.98;
+	processor.averaging = averaging || 0.95;
+	processor.clipLag = clipLag || 750;
+
+	// this will have no effect, since we don't copy the input to the output,
+	// but works around a current Chrome bug.
+	processor.connect(audioContext.destination);
+
+	processor.checkClipping =
+		function(){
+			if (!this.clipping)
+				return false;
+			if ((this.lastClip + this.clipLag) < window.performance.now())
+				this.clipping = false;
+			return this.clipping;
+		};
+
+	processor.shutdown =
+		function(){
+			this.disconnect();
+			this.onaudioprocess = null;
+		};
+
+	return processor;
+}
+
+function volumeAudioProcess( event ) {
+	var buf = event.inputBuffer.getChannelData(0);
+    var bufLength = buf.length;
+	var sum = 0;
+    var x;
+
+	// Do a root-mean-square on the samples: sum up the squares...
+    for (var i=0; i<bufLength; i++) {
+    	x = buf[i];
+    	if (Math.abs(x)>=this.clipLevel) {
+    		this.clipping = true;
+    		this.lastClip = window.performance.now();
+    	}
+        if(x < 0.000001) { x = 0; }
+    	sum += x * x;
+    }
+
+    // ... then take the square root of the sum.
+    var rms =  Math.sqrt(sum / bufLength);
+
+    // Now smooth this out with the averaging factor applied
+    // to the previous sample - take the max here because we
+    // want "fast attack, slow release."
+    this.volume = Math.max(rms, this.volume*this.averaging);
+}
+
+
+function onLevelChange( time ) {
+    // // clear the background
+    canvasContext.clearRect(0,0,canvasW,canvasH);
+
+    let vol = 0
+
+    if(meter.volume > 0.0001){
+        vol = meter.volume * 5
+    }
+
+    let barCount = 15
+    let barGap = 0.01 * canvasW
+
+    canvasContext.shadowBlur = 5
+
+    // draw a bar based on the current volume
+    for (let i = 0; i < barCount; i++) {
+        canvasContext.beginPath()
+        canvasContext.shadowColor = canvasContext.fillStyle = getBoxColor(i, vol, barCount)
+        let width = canvasW / (barCount + 1) - barGap
+        canvasContext.fillRect(barGap*(i+1) + width*i, canvasH*0.1, width, canvasH*0.8)
+    }
+
+    // set up the next visual callback
+    rafID = window.requestAnimationFrame( onLevelChange );
+}
+
+
+function getBoxColor(i, volume, barCount){
+
+    let h = 99
+
+    if(i > barCount * 0.65){
+        h = 48
+    }
+
+    if(i > barCount * 0.8){
+        h = 0
+    }
+
+    let l = 13
+
+    if(i / barCount < volume){
+        l = 50
+    }
+
+    return `hsl(${h}, 50%, ${l}%)`
 }

@@ -6,7 +6,7 @@ import { stopSoundWave, playSoundWave, updateBuffer, initAudioContext, delayTime
 , filterCutoff, filterResonance, drive, masterVolume, attackTimeSet, decayTimeSet } from './synth.js';
 
 import { connectMidi, note2Frequency, nPiontsCC, cutoffCC, resonanceCC, delayTimeCC, delayWetCC,
-         attackCC, decayCC, driveCC, masterVolCC, knobHighlight } from './midi.js';
+         attackCC, decayCC, driveCC, masterVolCC, knobHighlight, octaveChange } from './midi.js';
 let conductor = null;
 
 let knobNFFT = document.getElementById("knob-nfft")
@@ -21,6 +21,7 @@ let knobMasterVol = document.getElementById("knob-master")
 
 let knobs = [knobNFFT, knobCutoff, knobResonance, knobAttack, knobDecay, 
     knobDelayTime, knobDelayWet, knobDrive, knobMasterVol]
+let octave = 0;
 
 function init() {
 
@@ -215,7 +216,7 @@ function init() {
     }
 
     if (hasElement('knob-master')) {
-
+        
         knobMasterVol.min = 0
         knobMasterVol.max = 1.0
         knobMasterVol.value = 0.75
@@ -232,6 +233,23 @@ function init() {
         });
     }
 
+    if (hasElement('sw')) {
+        let switchOctave = document.getElementById("sw")
+
+        switchOctave.sprites = 4
+        switchOctave.value = 0
+        switchOctave.min = -2
+        switchOctave.max = 2
+        switchOctave.height = 20
+        switchOctave.valuetip = 0
+        // switchOctave.tooltip = "Octave"
+        // switchOctave.conv="(x)"
+        switchOctave.addEventListener("input", (event)=>{
+            octave = event.target.value;
+            octaveChange(octave);
+        });
+    }
+
     if (hasElement('keyboard')) {
         let kb = document.getElementById("keyboard")
         kb.width = Math.round(window.innerWidth * 0.75)
@@ -240,7 +258,7 @@ function init() {
             let state = event.note[0]
             let note = event.note[1]
             if(state){
-                playSoundWave(note, note2Frequency(note));
+                playSoundWave(note, note2Frequency(note+octave*12));
             }
             else{
                 stopSoundWave(note);

@@ -25,6 +25,8 @@
 <div class="section">FILTER</div>
 <div class="section">EG</div>
 <div class="section">DELAY</div>
+
+<canvas id="meter" class="meter" width=60 height=10></canvas>
 <div class="multi-container signal">
 	<div class="sketch" >
 		<canvas id="wave-draw" class="sketch-child" width=500 height=500></canvas>
@@ -34,6 +36,11 @@
 </div>
 
 
+<div class="switch">
+	<webaudio-knob class="switch-child" id="sw" src="../img/swc.png"></webaudio-knob>
+	<p class="switch-text">OCTAVE<p>
+	<webaudio-param class="switch-value" link="sw"></webaudio-param>
+</div>
 <div class="nfft knob"><webaudio-knob class="knob-child" id="knob-nfft"></webaudio-knob><p class="knob-text">POINT</p></div>
 <div class="cutoff knob"><webaudio-knob class="knob-child" id="knob-cutoff"></webaudio-knob><p class="knob-text">CUTOFF</p></div>
 <div class="resonance knob"><webaudio-knob class="knob-child" id="knob-resonance"></webaudio-knob><p class="knob-text">RESONANCE</p></div>
@@ -46,7 +53,11 @@
 
 <webaudio-keyboard class="keyboard" id="keyboard" width="1300" height="450" keys="25" min="48" outline="0"></webaudio-keyboard>
 </main>
+
+<p align="center">play with [z] [x] [c] [v].... on your PC keyboard</p>
 <div align="center"><a href="https://github.com/DCisHurt/FourierSynth">Github Repository</a></div>
+
+
 <!-- <script src="build/main.bundle.js" async></script> -->
 <script type="module" src="./js/main.js" async></script>
 <!-- <script src="src/js/midi.js" async></script> -->

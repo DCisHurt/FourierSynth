@@ -1181,6 +1181,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "masterVolCC": () => (/* binding */ masterVolCC),
 /* harmony export */   "nPiontsCC": () => (/* binding */ nPiontsCC),
 /* harmony export */   "note2Frequency": () => (/* binding */ note2Frequency),
+/* harmony export */   "octaveChange": () => (/* binding */ octaveChange),
 /* harmony export */   "resonanceCC": () => (/* binding */ resonanceCC)
 /* harmony export */ });
 /* harmony import */ var _synth_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./synth.js */ "./src/js/synth.js");
@@ -1196,6 +1197,7 @@ let driveCC = [];
 let masterVolCC = [];
 let knobHighlight = [];
 var highlight = 0;
+var octaveShift = 0;
 function connectMidi() {
   navigator.requestMIDIAccess().then(midi => midiReady(midi), err => console.log('Something went wrong', err));
 }
@@ -1246,7 +1248,7 @@ function midiMessageReceived(event) {
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.stopSoundWave)(channel);
   } else if (cmd === NOTE_ON) {
     console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}`);
-    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(value));
+    (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.playSoundWave)(channel, note2Frequency(value + octaveShift * 12));
   } else if (cmd === PITCH_BEND) {
     const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
     (0,_synth_js__WEBPACK_IMPORTED_MODULE_0__.pitchShift)(channel, bend);
@@ -1306,6 +1308,9 @@ function midiMessageReceived(event) {
   }
 }
 
+function octaveChange(val) {
+  octaveShift = val;
+}
 function note2Frequency(note) {
   return 440 * Math.pow(2, (note - 69) / 12);
 }
@@ -1352,11 +1357,20 @@ let MasterVol = null;
 let DistortionOn = false;
 let attackTime = 0.1;
 let decayTime = 0.5;
+var rafID = null;
+var meter = null;
+var canvasContext = null;
+let canvasW;
+let canvasH;
 function initAudioContext() {
   if (audioContext === null) {
     audioContext = new AudioContext();
   }
 
+  let canvas = document.getElementById("meter");
+  canvasW = canvas.width;
+  canvasH = canvas.height;
+  canvasContext = canvas.getContext("2d");
   Filter = audioContext.createBiquadFilter();
   Filter.type = "lowpass";
   filterCutoff(1);
@@ -1379,6 +1393,9 @@ function initAudioContext() {
   DelayGain.connect(MasterVol);
   Filter.connect(MasterVol);
   MasterVol.connect(audioContext.destination);
+  meter = createAudioMeter(audioContext);
+  MasterVol.connect(meter);
+  onLevelChange();
 }
 function updateBuffer(wave) {
   if (wave.length > 0) {
@@ -1407,22 +1424,24 @@ function updateBuffer(wave) {
   }
 }
 function playSoundWave(ch, pitch) {
-  osc[ch] = audioContext.createOscillator();
-  gain[ch] = audioContext.createGain();
-  osc[ch].setPeriodicWave(wave2);
-  osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
-  gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
-  gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
-  gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
-  osc[ch].connect(gain[ch]);
+  if (osc[ch] == null) {
+    osc[ch] = audioContext.createOscillator();
+    gain[ch] = audioContext.createGain();
+    osc[ch].setPeriodicWave(wave2);
+    osc[ch].frequency.setValueAtTime(pitch, audioContext.currentTime);
+    gain[ch].gain.setValueAtTime(0, audioContext.currentTime);
+    gain[ch].gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attackTime);
+    gain[ch].gain.setTargetAtTime(0.5, audioContext.currentTime + attackTime, decayTime);
+    osc[ch].connect(gain[ch]);
 
-  if (DistortionOn) {
-    gain[ch].connect(Distortion);
-  } else {
-    gain[ch].connect(Filter);
+    if (DistortionOn) {
+      gain[ch].connect(Distortion);
+    } else {
+      gain[ch].connect(Filter);
+    }
+
+    osc[ch].start();
   }
-
-  osc[ch].start();
 }
 function stopSoundWave(ch) {
   if (osc[ch] != null) {
@@ -1514,6 +1533,106 @@ function makeDistortionCurve(amount) {
   }
 
   return curve;
+}
+
+function createAudioMeter(audioContext, clipLevel, averaging, clipLag) {
+  var processor = audioContext.createScriptProcessor(512);
+  processor.onaudioprocess = volumeAudioProcess;
+  processor.clipping = false;
+  processor.lastClip = 0;
+  processor.volume = 0;
+  processor.clipLevel = clipLevel || 0.98;
+  processor.averaging = averaging || 0.95;
+  processor.clipLag = clipLag || 750; // this will have no effect, since we don't copy the input to the output,
+  // but works around a current Chrome bug.
+
+  processor.connect(audioContext.destination);
+
+  processor.checkClipping = function () {
+    if (!this.clipping) return false;
+    if (this.lastClip + this.clipLag < window.performance.now()) this.clipping = false;
+    return this.clipping;
+  };
+
+  processor.shutdown = function () {
+    this.disconnect();
+    this.onaudioprocess = null;
+  };
+
+  return processor;
+}
+
+function volumeAudioProcess(event) {
+  var buf = event.inputBuffer.getChannelData(0);
+  var bufLength = buf.length;
+  var sum = 0;
+  var x; // Do a root-mean-square on the samples: sum up the squares...
+
+  for (var i = 0; i < bufLength; i++) {
+    x = buf[i];
+
+    if (Math.abs(x) >= this.clipLevel) {
+      this.clipping = true;
+      this.lastClip = window.performance.now();
+    }
+
+    if (x < 0.000001) {
+      x = 0;
+    }
+
+    sum += x * x;
+  } // ... then take the square root of the sum.
+
+
+  var rms = Math.sqrt(sum / bufLength); // Now smooth this out with the averaging factor applied
+  // to the previous sample - take the max here because we
+  // want "fast attack, slow release."
+
+  this.volume = Math.max(rms, this.volume * this.averaging);
+}
+
+function onLevelChange(time) {
+  // // clear the background
+  canvasContext.clearRect(0, 0, canvasW, canvasH);
+  let vol = 0;
+
+  if (meter.volume > 0.0001) {
+    vol = meter.volume * 5;
+  }
+
+  let barCount = 15;
+  let barGap = 0.01 * canvasW;
+  canvasContext.shadowBlur = 5; // draw a bar based on the current volume
+
+  for (let i = 0; i < barCount; i++) {
+    canvasContext.beginPath();
+    canvasContext.shadowColor = canvasContext.fillStyle = getBoxColor(i, vol, barCount);
+    let width = canvasW / (barCount + 1) - barGap;
+    canvasContext.fillRect(barGap * (i + 1) + width * i, canvasH * 0.1, width, canvasH * 0.8);
+  } // set up the next visual callback
+
+
+  rafID = window.requestAnimationFrame(onLevelChange);
+}
+
+function getBoxColor(i, volume, barCount) {
+  let h = 99;
+
+  if (i > barCount * 0.65) {
+    h = 48;
+  }
+
+  if (i > barCount * 0.8) {
+    h = 0;
+  }
+
+  let l = 13;
+
+  if (i / barCount < volume) {
+    l = 50;
+  }
+
+  return `hsl(${h}, 50%, ${l}%)`;
 }
 
 /***/ }),
@@ -1827,6 +1946,7 @@ let knobDelayWet = document.getElementById("knob-delay-wet");
 let knobDrive = document.getElementById("knob-drive");
 let knobMasterVol = document.getElementById("knob-master");
 let knobs = [knobNFFT, knobCutoff, knobResonance, knobAttack, knobDecay, knobDelayTime, knobDelayWet, knobDrive, knobMasterVol];
+let octave = 0;
 
 function init() {
   let controllers = [];
@@ -2033,6 +2153,22 @@ function init() {
     });
   }
 
+  if (hasElement('sw')) {
+    let switchOctave = document.getElementById("sw");
+    switchOctave.sprites = 4;
+    switchOctave.value = 0;
+    switchOctave.min = -2;
+    switchOctave.max = 2;
+    switchOctave.height = 20;
+    switchOctave.valuetip = 0; // switchOctave.tooltip = "Octave"
+    // switchOctave.conv="(x)"
+
+    switchOctave.addEventListener("input", event => {
+      octave = event.target.value;
+      (0,_midi_js__WEBPACK_IMPORTED_MODULE_4__.octaveChange)(octave);
+    });
+  }
+
   if (hasElement('keyboard')) {
     let kb = document.getElementById("keyboard");
     kb.width = Math.round(window.innerWidth * 0.75);
@@ -2042,7 +2178,7 @@ function init() {
       let note = event.note[1];
 
       if (state) {
-        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.playSoundWave)(note, (0,_midi_js__WEBPACK_IMPORTED_MODULE_4__.note2Frequency)(note));
+        (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.playSoundWave)(note, (0,_midi_js__WEBPACK_IMPORTED_MODULE_4__.note2Frequency)(note + octave * 12));
       } else {
         (0,_synth_js__WEBPACK_IMPORTED_MODULE_3__.stopSoundWave)(note);
       }

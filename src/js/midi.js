@@ -11,7 +11,9 @@ export let driveCC = [];
 export let masterVolCC = [];
 export let knobHighlight = [];
 
+
 var highlight = 0;
+var octaveShift = 0;
 
 export function connectMidi() {
 
@@ -69,7 +71,7 @@ function midiMessageReceived(event) {
     } 
     else if (cmd === NOTE_ON) {
         console.log(`🎧 from ${event.srcElement.name}, channel: ${channel}, note on: pitch:${value}`);
-        playSoundWave(channel,note2Frequency(value));
+        playSoundWave(channel,note2Frequency(value+octaveShift*12));
     }
     else if (cmd === PITCH_BEND) {
         const bend = ((event.data[2] << 7) + event.data[1] - 8192) / 8192;
@@ -121,7 +123,9 @@ function midiMessageReceived(event) {
     }
 }
 
-
+export function octaveChange(val) {
+    octaveShift = val;
+}
 export function note2Frequency(note) {
     return 440 * Math.pow(2,(note-69)/12);
 }
