@@ -2171,8 +2171,27 @@ function init() {
 
   if (hasElement('keyboard')) {
     let kb = document.getElementById("keyboard");
-    kb.width = Math.round(window.innerWidth * 0.75);
-    kb.height = Math.round(window.innerHeight * 0.4);
+    let ratio = window.innerWidth / window.innerHeight;
+
+    if (ratio < 1.6) {
+      kb.width = Math.round(window.innerWidth * 0.6);
+      kb.height = Math.round(kb.width * 0.3);
+    } else {
+      kb.width = Math.round(window.innerWidth * 0.75);
+      kb.height = Math.round(kb.width * 0.29);
+    }
+
+    window.addEventListener("resize", event => {
+      let ratio = window.innerWidth / window.innerHeight;
+
+      if (ratio < 1.6) {
+        kb.width = Math.round(window.innerWidth * 0.6);
+        kb.height = Math.round(kb.width * 0.3);
+      } else {
+        kb.width = Math.round(window.innerWidth * 0.75);
+        kb.height = Math.round(kb.width * 0.29);
+      }
+    });
     kb.addEventListener("change", event => {
       let state = event.note[0];
       let note = event.note[1];
